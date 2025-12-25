@@ -3,7 +3,7 @@ import path from 'node:path'
 import { Hono } from "hono"
 import { logger } from "hono/logger"
 import { serveStatic } from "@hono/node-server/serve-static"
-import { handle } from 'hono/vercel'
+// import { handle } from 'hono/vercel' // Removed: Not needed for zero-config
 import { authMiddleware } from "./middlewares/auth.middleware"
 import routes from "./routes/index"
 
@@ -103,7 +103,8 @@ app.use('/upload/*', authMiddleware)
 app.notFound((c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
 
 // 8. EXPORT DEFAULT (Vital for Vercel Zero Config)
-export default handle(app)
+// Vercel detects the Hono app instance automatically
+export default app
 
-// Export app instance for local dev (src/server.ts)
+// Export app instance (named export) for local dev (src/server.ts)
 export { app }
