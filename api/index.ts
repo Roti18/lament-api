@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
 
-const app = new Hono().basePath('/api')
+// App TANPA basePath
+const app = new Hono()
 
 // CORS
 app.use('*', async (c, next) => {
@@ -12,8 +13,8 @@ app.use('*', async (c, next) => {
     await next()
 })
 
-app.get('/', (c) => c.text('Lament API v2.0.4'))
-app.get('/test', (c) => c.json({ status: 'ok', version: '2.0.4' }))
+app.get('/', (c) => c.text('Lament API v2.0.5'))
+app.get('/test', (c) => c.json({ status: 'ok', version: '2.0.5' }))
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 app.notFound((c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
