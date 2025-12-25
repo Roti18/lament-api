@@ -27,6 +27,7 @@
     "@hono/zod-validator": "^0.7.6",
     "@libsql/client": "^0.15.15",
     "@types/sharp": "^0.31.1",
+    "@upstash/redis": "^1.36.0",
     "data-uri-to-buffer": "^4.0.1",
     "detect-libc": "^2.0.2",
     "esbuild": "^0.27.2",
