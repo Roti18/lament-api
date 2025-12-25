@@ -3,6 +3,7 @@ import path from 'node:path'
 import { Hono } from "hono"
 import { logger } from "hono/logger"
 import { serveStatic } from "@hono/node-server/serve-static"
+import { handle } from 'hono/vercel'
 import { authMiddleware } from "./middlewares/auth.middleware"
 import routes from "./routes/index"
 
@@ -11,14 +12,7 @@ const app = new Hono()
 // 1. Logger
 app.use("*", logger())
 
-// DEBUG: Inspect incoming path
-app.use("*", async (c, next) => {
-    console.log('[DEBUG VERCEL] c.req.path:', c.req.path)
-    console.log('[DEBUG VERCEL] c.req.url:', c.req.url)
-    await next()
-})
-
-// 2. MANUAL CORS (Fix Vercel Node Runtime Compatibility)
+// 2. MANUAL CORS check
 app.use("*", async (c, next) => {
     const origin = process.env.ALLOWED_ORIGINS || '*'
 
@@ -37,7 +31,7 @@ app.use("*", async (c, next) => {
 // 3. Version Header
 app.use("*", async (c, next) => {
     await next()
-    c.header('X-App-Version', '2.1.0')
+    c.header('X-App-Version', '2.2.0')
 })
 
 // 4. Static Docs
@@ -74,8 +68,8 @@ app.get('/', (c) => c.html(`
 <body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center">
     <div class="text-center">
         <h1 class="text-4xl font-bold text-indigo-400 mb-4">Lament API</h1>
-        <p class="text-zinc-400">Music streaming backend service</p>
-        <p class="text-zinc-500 mt-2">Version 2.1.0 (Production)</p>
+        <p class="text-zinc-400">Music streaming backend service (Zero Config)</p>
+        <p class="text-zinc-500 mt-2">Version 2.2.0</p>
         <div class="mt-6 space-x-4">
             <a href="/docs/index.html" class="text-indigo-300 hover:underline">API Docs</a>
             <a href="/health" class="text-indigo-300 hover:underline">Health</a>
@@ -87,7 +81,9 @@ app.get('/', (c) => c.html(`
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
-// 6. Auth Middleware (Apply to all protected routes)
+// 6. Routes Configuration
+app.route("/", routes)
+
 app.use('/tracks', authMiddleware)
 app.use('/tracks/*', authMiddleware)
 app.use('/artists', authMiddleware)
@@ -103,10 +99,11 @@ app.use('/api-keys/*', authMiddleware)
 app.use('/upload', authMiddleware)
 app.use('/upload/*', authMiddleware)
 
-// 7. API Routes
-app.route("/", routes)
-
-// 8. 404 Handler
+// 7. 404
 app.notFound((c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
 
-export default app
+// 8. EXPORT DEFAULT (Vital for Vercel Zero Config)
+export default handle(app)
+
+// Export app instance for local dev (src/server.ts)
+export { app }
