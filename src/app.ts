@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Hono } from "hono"
 import { logger } from "hono/logger"
-import { cors } from "hono/cors"
 import { serveStatic } from "@hono/node-server/serve-static"
 import { authMiddleware } from "./middlewares/auth.middleware"
 import routes from "./routes/index"
@@ -12,32 +11,31 @@ const app = new Hono()
 // 1. Logger
 app.use("*", logger())
 
-// 2. CORS dari ENV (default: allow all)
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['*']
+// 2. MANUAL CORS - Tidak pakai hono/cors karena crash di Vercel
+app.use("*", async (c, next) => {
+    const origin = process.env.ALLOWED_ORIGINS || '*'
 
-app.use("*", cors({
-    origin: (origin) => {
-        if (allowedOrigins.includes('*')) return '*'
-        if (!origin) return allowedOrigins[0]
-        return allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
-    },
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
-    maxAge: 86400,
-}))
+    c.header('Access-Control-Allow-Origin', origin.includes(',') ? '*' : origin)
+    c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key')
+    c.header('Access-Control-Max-Age', '86400')
+
+    if (c.req.method === 'OPTIONS') {
+        return c.body(null, 204)
+    }
+
+    await next()
+})
 
 // 3. Version Header
 app.use("*", async (c, next) => {
     await next()
-    c.header('X-App-Version', '2.0.0')
+    c.header('X-App-Version', '2.0.1')
 })
 
-// 4. Static Docs (for local dev)
+// 4. Static Docs
 app.use('/docs/*', serveStatic({ root: './' }))
 
-// 5. Fallback for /docs/index.html explicit
 app.get('/docs/index.html', async (c) => {
     try {
         const html = fs.readFileSync(path.join(process.cwd(), 'docs', 'index.html'), 'utf-8')
@@ -47,7 +45,6 @@ app.get('/docs/index.html', async (c) => {
     }
 })
 
-// 6. Docs JSON endpoint
 app.get('/docs/docs.json', async (c) => {
     try {
         const json = fs.readFileSync(path.join(process.cwd(), 'docs', 'docs.json'), 'utf-8')
@@ -57,7 +54,7 @@ app.get('/docs/docs.json', async (c) => {
     }
 })
 
-// 7. Home
+// 5. Home
 app.get('/', (c) => c.html(`
 <!DOCTYPE html>
 <html lang="en">
@@ -71,10 +68,10 @@ app.get('/', (c) => c.html(`
     <div class="text-center">
         <h1 class="text-4xl font-bold text-indigo-400 mb-4">Lament API</h1>
         <p class="text-zinc-400">Music streaming backend service</p>
-        <p class="text-zinc-500 mt-2">Version 2.0.0</p>
+        <p class="text-zinc-500 mt-2">Version 2.0.1</p>
         <div class="mt-6 space-x-4">
             <a href="/docs/index.html" class="text-indigo-300 hover:underline">API Docs</a>
-            <a href="/tracks" class="text-indigo-300 hover:underline">Tracks</a>
+            <a href="/health" class="text-indigo-300 hover:underline">Health</a>
         </div>
     </div>
 </body>
@@ -83,7 +80,7 @@ app.get('/', (c) => c.html(`
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
-// 8. Auth Middleware untuk protected routes
+// 6. Auth Middleware untuk protected routes
 app.use('/tracks/*', authMiddleware)
 app.use('/artists/*', authMiddleware)
 app.use('/albums/*', authMiddleware)
@@ -92,10 +89,10 @@ app.use('/users/*', authMiddleware)
 app.use('/api-keys/*', authMiddleware)
 app.use('/upload/*', authMiddleware)
 
-// 9. API Routes
+// 7. API Routes
 app.route("/", routes)
 
-// 10. 404 Handler
+// 8. 404 Handler
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))
 
 export default app
