@@ -50,7 +50,6 @@ export const updateAlbum = async (c: Context) => {
 export const deleteAlbum = async (c: Context) => {
     const id = c.req.param('id')
 
-    // Get existing record
     const rs = await db.execute({
         sql: 'SELECT cover_url FROM albums WHERE id = ?',
         args: [id]

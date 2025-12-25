@@ -48,7 +48,6 @@ export const updateArtist = async (c: Context) => {
 export const deleteArtist = async (c: Context) => {
     const id = c.req.param('id')
 
-    // Get existing record to find image_url
     const rs = await db.execute({
         sql: 'SELECT image_url FROM artists WHERE id = ?',
         args: [id]
