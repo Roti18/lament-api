@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Hono } from "hono"
 import { logger } from "hono/logger"
-import { cors } from "hono/cors"
 import { secureHeaders } from "hono/secure-headers"
 
 import { authMiddleware } from "./middlewares/auth.middleware"
@@ -13,7 +12,7 @@ const app = new Hono()
 // 1. Version Header for Debugging
 app.use("*", async (c, next) => {
     await next()
-    c.header('X-App-Version', '1.0.2-fixed')
+    c.header('X-App-Version', '1.0.3-no-cors')
     c.header('X-Powered-By', 'Lament-API')
 })
 
@@ -23,24 +22,15 @@ app.use("*", logger())
 // 3. Simplified & Safe Headers for Vercel
 app.use("*", secureHeaders())
 
-// 4. Safe CORS for Vercel Serverless
-app.use("*", cors({
-    origin: '*',
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
-    maxAge: 600,
-}))
-
 // 5. Auth Bypass for Docs & Options
 app.use('*', async (c, next) => {
-    // Explicitly allow OPTIONS and Public paths
-    if (c.req.method === 'OPTIONS' || c.req.path === '/' || c.req.path.startsWith('/docs')) {
+    if (c.req.path === '/' || c.req.path.startsWith('/docs')) {
         return await next()
     }
     return authMiddleware(c, next)
 })
 
-// 6. Documentation (Manual fs to avoid node-server/serve-static issues)
+// 6. Documentation
 app.get('/', (c) => {
     try {
         const filePath = path.join(process.cwd(), 'docs', 'index.html')
