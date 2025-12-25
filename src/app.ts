@@ -81,12 +81,19 @@ app.get('/', (c) => c.html(`
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
 // 6. Auth Middleware untuk protected routes
+app.use('/tracks', authMiddleware)
 app.use('/tracks/*', authMiddleware)
+app.use('/artists', authMiddleware)
 app.use('/artists/*', authMiddleware)
+app.use('/albums', authMiddleware)
 app.use('/albums/*', authMiddleware)
+app.use('/categories', authMiddleware)
 app.use('/categories/*', authMiddleware)
+app.use('/users', authMiddleware)
 app.use('/users/*', authMiddleware)
+app.use('/api-keys', authMiddleware)
 app.use('/api-keys/*', authMiddleware)
+app.use('/upload', authMiddleware)
 app.use('/upload/*', authMiddleware)
 
 // 7. API Routes
