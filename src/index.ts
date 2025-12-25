@@ -1,4 +1,7 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { Hono } from 'hono'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { authMiddleware } from './middlewares/auth.middleware'
 import routes from './routes/index'
 
@@ -20,7 +23,19 @@ app.use('*', async (c, next) => {
 })
 
 app.use('*', async (c, next) => {
-    c.header('Access-Control-Allow-Origin', ORIGINS || '*')
+    const requestOrigin = c.req.header('origin') || ''
+    let allowOrigin = '*'
+
+    if (ORIGINS) {
+        const allowedList = ORIGINS.split(',').map(o => o.trim())
+        if (allowedList.includes(requestOrigin)) {
+            allowOrigin = requestOrigin
+        } else if (allowedList.length === 1) {
+            allowOrigin = allowedList[0]
+        }
+    }
+
+    c.header('Access-Control-Allow-Origin', allowOrigin)
     c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     c.header('Access-Control-Allow-Headers', 'Content-Type,x-api-key')
     c.header('Access-Control-Max-Age', '86400')
@@ -29,6 +44,26 @@ app.use('*', async (c, next) => {
     c.header('Cache-Control', 'no-store')
     if (c.req.method === 'OPTIONS') return c.body(null, 204)
     await next()
+})
+
+app.use('/docs/*', serveStatic({ root: './' }))
+
+app.get('/docs/docs.json', async (c) => {
+    try {
+        const json = fs.readFileSync(path.join(process.cwd(), 'docs', 'docs.json'), 'utf-8')
+        return c.json(JSON.parse(json))
+    } catch {
+        return c.json({ error: 'E_NF' }, 404)
+    }
+})
+
+app.get('/', async (c) => {
+    try {
+        const html = fs.readFileSync(path.join(process.cwd(), 'docs', 'index.html'), 'utf-8')
+        return c.html(html)
+    } catch {
+        return c.text('Not found', 404)
+    }
 })
 
 app.get('/health', (c) => c.json({ s: 1 }))
