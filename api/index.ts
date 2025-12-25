@@ -1,7 +1,7 @@
 import { handle } from 'hono/vercel'
 import app from '../src/app'
 
-// Pastikan pakai Node.js karena kita butuh Sharp
+// Node.js runtime untuk support fs (docs serving)
 export const config = {
     runtime: 'nodejs'
 }
