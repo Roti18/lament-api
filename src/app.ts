@@ -14,19 +14,17 @@ const app = new Hono()
 
 // Global Middlewares
 app.use("*", secureHeaders())
-app.use("*", securityHardening)
+app.use("*", async (c, next) => {
+    await next()
+    c.header('X-Powered-By', 'Lament') // Set instead of delete
+})
+
+// Simplified CORS
 app.use("*", cors())
+
 app.use("*", logger())
 
-// Auth Middleware (Global check, but logic inside might skip root)
-app.use('/api/*', authMiddleware)
-// Note: original api/index.ts had strict auth on *, here boilerplate uses /api/*.
-// To preserve existing contract which enforced keys on /tracks etc, let's map it correctly.
-// User wants strict auth. if we route logic to /api/tracks, then /api/* middleware hits.
-// BUT existing frontend calls /tracks directly (not /api/tracks).
-// So we must apply middleware to * explicitly OR route everything under /api but handle redirects?
-// NO, "No change to API contracts". URL must stay /tracks.
-// So we must use app.use('*', authMiddleware) like before.
+// ... rest of the middleware ...
 
 app.use('*', authMiddleware)
 
@@ -40,16 +38,25 @@ app.use('*', async (c, next) => {
 
 // Documentation (Root)
 app.get('/', (c) => {
-    const htmlDocs = fs.readFileSync(path.join(process.cwd(), 'docs', 'index.html'), 'utf-8')
-    return c.html(htmlDocs)
+    try {
+        const htmlDocs = fs.readFileSync(path.join(process.cwd(), 'docs', 'index.html'), 'utf-8')
+        return c.html(htmlDocs)
+    } catch (e) {
+        return c.text('Docs not found', 404)
+    }
 })
 
-// Serve docs static assets (usually just docs.json)
-app.get("/docs/*", serveStatic({ root: "./" }))
+// Serve docs.json manually (Vercel friendly)
+app.get("/docs/docs.json", (c) => {
+    try {
+        const json = fs.readFileSync(path.join(process.cwd(), 'docs', 'docs.json'), 'utf-8')
+        return c.json(JSON.parse(json))
+    } catch (e) {
+        return c.json({ error: 'Docs not found' }, 404)
+    }
+})
 
 // Routes
-// Original was root-level /tracks. Boilerplate pushes to /api. 
-// "No change to API contracts" means we KEEP root level.
 app.route("/", routes)
 
 app.notFound((c) =>
