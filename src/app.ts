@@ -96,10 +96,13 @@ app.use('/api-keys/*', authMiddleware)
 app.use('/upload', authMiddleware)
 app.use('/upload/*', authMiddleware)
 
-// 7. API Routes
+// 7. DEBUG: Test route to verify routing works
+app.get('/test-route', (c) => c.json({ message: 'Test route works!', version: '2.0.2' }))
+
+// 8. API Routes
 app.route("/", routes)
 
-// 8. 404 Handler
-app.notFound((c) => c.json({ error: 'Not Found' }, 404))
+// 9. 404 Handler
+app.notFound((c) => c.json({ error: 'Not Found', path: c.req.path }, 404))
 
 export default app
