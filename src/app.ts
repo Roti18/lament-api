@@ -11,6 +11,13 @@ const app = new Hono()
 // 1. Logger
 app.use("*", logger())
 
+// DEBUG: Inspect incoming path
+app.use("*", async (c, next) => {
+    console.log('[DEBUG VERCEL] c.req.path:', c.req.path)
+    console.log('[DEBUG VERCEL] c.req.url:', c.req.url)
+    await next()
+})
+
 // 2. MANUAL CORS (Fix Vercel Node Runtime Compatibility)
 app.use("*", async (c, next) => {
     const origin = process.env.ALLOWED_ORIGINS || '*'
