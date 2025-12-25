@@ -10,54 +10,60 @@ import routes from "./routes/index"
 
 const app = new Hono()
 
-// 1. SECURITY & LOGGING (Paling Atas)
-app.use("*", secureHeaders())
-app.use("*", logger())
-
-// 2. CORS (Gunakan yang paling simpel dulu agar tidak crash di Vercel)
-app.use("*", cors({
-    origin: '*', // Untuk testing prod, biarkan * dulu, nanti bisa kita perketat
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
-}))
-
-// 3. CLEANUP HEADERS
+// 1. Version Header for Debugging
 app.use("*", async (c, next) => {
     await next()
-    c.header('X-Powered-By', 'Lament')
+    c.header('X-App-Version', '1.0.2-fixed')
+    c.header('X-Powered-By', 'Lament-API')
 })
 
-// 4. AUTH (Hanya untuk /tracks, /artists, dll)
-// Kita lewatkan root (/) dan /docs/ agar dokumentasi tetap bisa terbuka
+// 2. Logging
+app.use("*", logger())
+
+// 3. Simplified & Safe Headers for Vercel
+app.use("*", secureHeaders())
+
+// 4. Safe CORS for Vercel Serverless
+app.use("*", cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+    maxAge: 600,
+}))
+
+// 5. Auth Bypass for Docs & Options
 app.use('*', async (c, next) => {
-    if (c.req.path === '/' || c.req.path.startsWith('/docs') || c.req.method === 'OPTIONS') {
+    // Explicitly allow OPTIONS and Public paths
+    if (c.req.method === 'OPTIONS' || c.req.path === '/' || c.req.path.startsWith('/docs')) {
         return await next()
     }
     return authMiddleware(c, next)
 })
 
-// 5. DOCUMENTATION (Manual Serving)
+// 6. Documentation (Manual fs to avoid node-server/serve-static issues)
 app.get('/', (c) => {
     try {
-        const html = fs.readFileSync(path.join(process.cwd(), 'docs', 'index.html'), 'utf-8')
+        const filePath = path.join(process.cwd(), 'docs', 'index.html')
+        const html = fs.readFileSync(filePath, 'utf-8')
         return c.html(html)
     } catch (e) {
-        return c.text('Lament API is Running')
+        return c.text('Lament API is Online')
     }
 })
 
 app.get('/docs/docs.json', (c) => {
     try {
-        const json = fs.readFileSync(path.join(process.cwd(), 'docs', 'docs.json'), 'utf-8')
+        const filePath = path.join(process.cwd(), 'docs', 'docs.json')
+        const json = fs.readFileSync(filePath, 'utf-8')
         return c.json(JSON.parse(json))
     } catch (e) {
         return c.json({ error: 'Docs not found' }, 404)
     }
 })
 
-// 6. BUSINESS ROUTES
+// 7. Business Routes
 app.route("/", routes)
 
-app.notFound((c) => c.json({ success: false, error: "Not Found" }, 404))
+app.notFound((c) => c.json({ success: false, error: "Route not found" }, 404))
 
 export default app
