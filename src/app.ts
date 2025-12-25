@@ -52,7 +52,10 @@ app.get('/', (c) => c.html(`
 </html>
 `))
 
-// 6. Routes
+// 6. Test Route (Debug)
+app.get('/test', (c) => c.json({ status: 'ok', version: '1.0.6' }))
+
+// 7. Routes
 app.route("/", routes)
 
 export default app
