@@ -1,32 +1,22 @@
 import { Redis } from '@upstash/redis'
 
-const url = typeof process !== 'undefined' ? process.env?.UPSTASH_REDIS_REST_URL : undefined
-const token = typeof process !== 'undefined' ? process.env?.UPSTASH_REDIS_REST_TOKEN : undefined
+const url = process.env.UPSTASH_REDIS_REST_URL
+const token = process.env.UPSTASH_REDIS_REST_TOKEN
 
 export const redis = (url && token) ? new Redis({ url, token }) : null
 
-export const isRateLimited = async (key: string, limit: number = 100, windowSeconds: number = 60): Promise<boolean> => {
+export const isRateLimited = async (key: string, limit: number = 100, window: number = 60): Promise<boolean> => {
     if (!redis) return false
-
-    const redisKey = `ratelimit:${key}`
-
+    const k = `rl:${key}`
     try {
-        const current = await redis.get<number>(redisKey) || 0
-
-        if (current >= limit) {
-            return true
-        }
-
-        const pipeline = redis.pipeline()
-        pipeline.incr(redisKey)
-        if (current === 0) {
-            pipeline.expire(redisKey, windowSeconds)
-        }
-        await pipeline.exec()
-
+        const c = await redis.get<number>(k) || 0
+        if (c >= limit) return true
+        const p = redis.pipeline()
+        p.incr(k)
+        if (c === 0) p.expire(k, window)
+        await p.exec()
         return false
-    } catch (e) {
-        console.error('Redis Error:', e)
+    } catch {
         return false
     }
 }

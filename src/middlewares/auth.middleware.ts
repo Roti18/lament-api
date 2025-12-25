@@ -1,58 +1,40 @@
 import { Context, Next } from 'hono'
+import { db } from '../config/db'
+import { redis, isRateLimited } from '../services/redis.service'
+import { timingSafeEqual } from 'node:crypto'
 
-// Edge-compatible auth middleware
+const MASTER = process.env.MASTER_KEY || ''
+const MASTER_BUF = Buffer.from(MASTER)
+
+const safeCompare = (a: string, b: string): boolean => {
+    const ba = Buffer.from(a)
+    const bb = Buffer.from(b)
+    if (ba.length !== bb.length) return false
+    return timingSafeEqual(ba, bb)
+}
+
 export const authMiddleware = async (c: Context, next: Next) => {
-    // Get API Key from header (Edge compatible)
-    const apiKey = c.req.header('x-api-key') || c.req.header('X-API-KEY')
-    const masterKey = typeof process !== 'undefined' ? process.env?.MASTER_KEY : undefined
+    const key = c.req.header('x-api-key')
+    if (!key) return c.json({ error: 'E_AUTH' }, 401)
 
-    if (!apiKey) {
-        return c.json({ error: 'Missing API Key' }, 401)
-    }
+    if (MASTER && safeCompare(key, MASTER)) return next()
 
-    // Master Key = Full Access
-    if (masterKey && apiKey === masterKey) {
-        return await next()
-    }
+    if (['POST', 'PUT', 'DELETE'].includes(c.req.method)) return c.json({ error: 'E_ACCESS' }, 403)
 
-    // Block write operations for non-master keys
-    if (['POST', 'PUT', 'DELETE'].includes(c.req.method)) {
-        return c.json({ error: 'Write access requires Master Key' }, 403)
-    }
-
-    // Validate against database
     try {
-        const { db } = await import('../config/db')
-        const rs = await db.execute({
-            sql: 'SELECT id, rate_limit FROM api_keys WHERE key_hash = ? AND is_active = 1',
-            args: [apiKey]
-        })
+        const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
+        if (rs.rows.length === 0) return c.json({ error: 'E_AUTH' }, 401)
 
-        if (rs.rows.length === 0) {
-            return c.json({ error: 'Invalid API Key' }, 401)
+        const row = rs.rows[0] as { id: number, rate_limit: number, clearance: number }
+
+        if (redis) {
+            const limited = await isRateLimited(key, row.rate_limit || 100, 60)
+            if (limited) return c.json({ error: 'E_LIMIT' }, 429)
         }
 
-        // Optional: Rate Limiting with Redis
-        try {
-            const { isRateLimited } = await import('../services/redis.service')
-            const keyData = rs.rows[0] as any
-            const limit = Number(keyData.rate_limit) || 100
-            const limited = await isRateLimited(apiKey, limit, 60)
-
-            if (limited) {
-                return c.json({
-                    error: 'Rate limit exceeded',
-                    limit: limit,
-                    window: '1 minute'
-                }, 429)
-            }
-        } catch {
-            // Redis not configured, skip rate limiting
-        }
-
-        return await next()
-    } catch (e: any) {
-        console.error('Auth Error:', e.message)
-        return c.json({ error: 'Authentication failed', details: e.message }, 500)
+        c.set('clearance', row.clearance || 0)
+        return next()
+    } catch {
+        return c.json({ error: 'E_AUTH' }, 500)
     }
 }
