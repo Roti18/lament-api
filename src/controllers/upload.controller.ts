@@ -12,12 +12,12 @@ export const uploadFile = async (c: Context) => {
         if (!type || !['image', 'audio'].includes(type)) return c.json({ error: 'E_TYPE' }, 400)
 
         const buffer = await file.arrayBuffer()
-        let finalBuffer = Buffer.from(buffer)
+        let finalBuffer: Buffer<ArrayBufferLike> = Buffer.from(buffer)
         let fileName = file.name
 
         if (type === 'image') {
             const processed = await processImage(buffer, file.type)
-            finalBuffer = processed.buffer as Buffer
+            finalBuffer = processed.buffer
             if (processed.extension === 'webp' && !fileName.endsWith('.webp')) {
                 fileName = fileName.replace(/\.[^/.]+$/, '') + '.webp'
             }

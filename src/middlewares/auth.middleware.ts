@@ -25,7 +25,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
         const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
         if (rs.rows.length === 0) return c.json({ error: 'E_AUTH' }, 401)
 
-        const row = rs.rows[0] as { id: number, rate_limit: number, clearance: number }
+        const row = rs.rows[0] as unknown as { id: number, rate_limit: number, clearance: number }
 
         if (redis) {
             const limited = await isRateLimited(key, row.rate_limit || 100, 60)
