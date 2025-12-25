@@ -38,8 +38,19 @@ export const authMiddleware = async (c: Context, next: Next) => {
             return c.json({ error: 'Invalid API Key' }, 401)
         }
 
-        // Optional: Update last_used_at
-        // await db.execute({...}) // Skip for performance on Edge
+        const keyData: any = rs.rows[0]
+        const limit = Number(keyData.rate_limit) || 100
+
+        // 5. RATE LIMIT CHECK (Redis)
+        const { isRateLimited } = await import('../services/redis.service')
+        const limited = await isRateLimited(apiKey, limit, 60) // 1 minute window
+
+        if (limited) {
+            return c.json({
+                error: 'Rate limit exceeded',
+                message: `You have reached your limit of ${limit} requests per minute.`
+            }, 429)
+        }
 
         return await next()
     } catch (e) {
