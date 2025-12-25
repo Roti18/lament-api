@@ -91,8 +91,8 @@ export const deleteTrack = async (c: Context) => {
         })
         if (rs.rows.length > 0) {
             const track: any = rs.rows[0]
-            if (track.audio_url) await deleteFileFromUrl(track.audio_url).catch(() => { })
-            if (track.cover_url) await deleteFileFromUrl(track.cover_url).catch(() => { })
+            if (track.audio_url) await deleteFileFromUrl(track.audio_url, 'audio').catch(() => { })
+            if (track.cover_url) await deleteFileFromUrl(track.cover_url, 'image').catch(() => { })
         }
         await db.execute({ sql: 'DELETE FROM tracks WHERE id = ?', args: [id] })
         return c.json({ success: true })
