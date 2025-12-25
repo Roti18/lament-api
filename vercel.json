@@ -5,5 +5,11 @@
             "maxDuration": 60,
             "includeFiles": "docs/**"
         }
-    }
+    },
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/api/index.ts"
+        }
+    ]
 }
