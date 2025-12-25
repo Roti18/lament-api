@@ -97,7 +97,6 @@ export const updateTrack = async (c: Context) => {
 export const deleteTrack = async (c: Context) => {
     const id = c.req.param('id')
 
-    // Get existing record
     const rs = await db.execute({
         sql: 'SELECT audio_url, cover_url FROM tracks WHERE id = ?',
         args: [id]
