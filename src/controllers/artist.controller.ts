@@ -19,6 +19,12 @@ const transformArtist = (row: ArtistRow) => ({
 
 export const listArtists = async (c: Context) => {
     try {
+        const q = c.req.query('q')
+        if (q) {
+            const rs = await db.execute({ sql: 'SELECT * FROM artists WHERE name LIKE ?', args: [`%${q}%`] })
+            return c.json((rs.rows as unknown as ArtistRow[]).map(transformArtist))
+        }
+
         const cached = await cacheGet<ArtistRow[]>('cache:artists:list')
         if (cached) return c.json(cached.map(transformArtist))
 

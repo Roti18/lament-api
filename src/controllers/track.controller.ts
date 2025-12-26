@@ -21,6 +21,12 @@ const transformTrack = (row: TrackRow) => ({
 
 export const listTracks = async (c: Context) => {
     try {
+        const q = c.req.query('q')
+        if (q) {
+            const rs = await db.execute({ sql: 'SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.status=\'ready\' AND t.title LIKE ? ORDER BY t.created_at DESC', args: [`%${q}%`] })
+            return c.json((rs.rows as unknown as TrackRow[]).map(transformTrack))
+        }
+
         const cached = await cacheGet<TrackRow[]>('cache:tracks:list')
         if (cached) return c.json(cached.map(transformTrack))
 

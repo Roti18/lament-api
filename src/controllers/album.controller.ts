@@ -23,6 +23,12 @@ const transformAlbum = (row: AlbumRow) => ({
 
 export const listAlbums = async (c: Context) => {
     try {
+        const q = c.req.query('q')
+        if (q) {
+            const rs = await db.execute({ sql: 'SELECT * FROM albums WHERE title LIKE ?', args: [`%${q}%`] })
+            return c.json((rs.rows as unknown as AlbumRow[]).map(transformAlbum))
+        }
+
         const cached = await cacheGet<AlbumRow[]>('cache:albums:list')
         if (cached) return c.json(cached.map(transformAlbum))
 
