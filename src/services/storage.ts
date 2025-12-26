@@ -1,6 +1,3 @@
-// ImageKit REST API - Edge-compatible (no SDK)
-// Docs: https://docs.imagekit.io/api-reference/
-
 const AUDIO_PRV = process.env.IMAGEKIT_AUDIO_PRIVATE_KEY
 const AUDIO_URL = process.env.IMAGEKIT_AUDIO_URL_ENDPOINT
 const IMAGE_PRV = process.env.IMAGEKIT_IMAGE_PRIVATE_KEY
@@ -34,7 +31,6 @@ export const uploadToImageKit = async (
 ): Promise<UploadResult> => {
     const { privateKey } = getCredentials(type)
 
-    // Convert to base64 using Edge-compatible method
     const bytes = file instanceof Uint8Array ? file : new Uint8Array(file)
     const base64 = btoa(String.fromCharCode(...bytes))
 
@@ -67,7 +63,6 @@ export const deleteFileFromUrl = async (url: string, type: 'image' | 'audio') =>
     if (!fileName) return
 
     try {
-        // Search for file by name
         const searchRes = await fetch(
             `https://api.imagekit.io/v1/files?searchQuery=name="${fileName}"&limit=1`,
             { headers: { 'Authorization': authHeader(privateKey) } }
@@ -78,7 +73,6 @@ export const deleteFileFromUrl = async (url: string, type: 'image' | 'audio') =>
         const files = await searchRes.json() as { fileId: string }[]
         if (!files || files.length === 0) return
 
-        // Delete file
         await fetch(`https://api.imagekit.io/v1/files/${files[0].fileId}`, {
             method: 'DELETE',
             headers: { 'Authorization': authHeader(privateKey) }

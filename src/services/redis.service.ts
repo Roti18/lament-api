@@ -5,7 +5,6 @@ const token = process.env.UPSTASH_REDIS_REST_TOKEN
 
 export const redis = (url && token) ? new Redis({ url, token }) : null
 
-// Rate limiting
 export const isRateLimited = async (key: string, limit: number = 100, window: number = 60): Promise<boolean> => {
     if (!redis) return false
     const k = `rl:${key}`
@@ -22,7 +21,6 @@ export const isRateLimited = async (key: string, limit: number = 100, window: nu
     }
 }
 
-// Cache TTLs (seconds)
 const TTL = {
     LIST: 60,
     ITEM: 120,

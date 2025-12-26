@@ -11,9 +11,6 @@ const run = async () => {
         }
 
         const sqlContent = fs.readFileSync(schemaPath, 'utf-8')
-        // Split by semicolon, but be careful with widely used delimiters. 
-        // For simple schema.sql, splitting by ';' matches usually works for SQLite/LibSQL 
-        // unless there are triggers/procedures.
         const statements = sqlContent
             .split(';')
             .map(s => s.trim())

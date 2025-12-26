@@ -27,7 +27,6 @@ app.use('*', async (c, next) => {
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
 
-    // Smart caching: GET requests can be cached, mutations cannot
     if (c.req.method === 'GET') {
         c.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
     } else {
@@ -38,7 +37,7 @@ app.use('*', async (c, next) => {
     await next()
 })
 
-app.get('/', (c) => c.redirect('/docs/index.html'))
+app.get('/', (c) => c.json({ name: 'lament-api', version: '1.0.0', status: 'ok', docs: '/docs/index.html' }))
 app.get('/health', (c) => c.json({ s: 1 }))
 
 const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload']
