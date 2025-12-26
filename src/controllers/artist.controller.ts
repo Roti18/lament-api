@@ -81,7 +81,19 @@ export const getArtist = async (c: Context) => {
             cover_thumb: optimizeImageUrl(t.cover_url, 'thumbnail')
         }))
 
-        const result = { ...artist, tracks }
+        // Fetch Albums for this Artist
+        const albs = await db.execute({
+            sql: 'SELECT id, title, slug, cover_url, year, type FROM albums WHERE artist_id = ? ORDER BY year DESC',
+            args: [id]
+        })
+
+        const albums = (albs.rows as unknown as any[]).map(a => ({
+            ...a,
+            cover_url: optimizeImageUrl(a.cover_url, 'cover'),
+            cover_thumb: optimizeImageUrl(a.cover_url, 'thumbnail')
+        }))
+
+        const result = { ...artist, tracks, albums }
 
         await cacheSet(cacheKey, result, TTL.ITEM)
         return c.json(transformArtist(result))
