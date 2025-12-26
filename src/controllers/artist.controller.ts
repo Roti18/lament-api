@@ -9,6 +9,7 @@ interface ArtistRow {
     name: string
     slug: string
     image_url: string
+    tracks?: any[]
 }
 
 const transformArtist = (row: ArtistRow) => ({
@@ -43,8 +44,25 @@ export const getArtist = async (c: Context) => {
 
         const rs = await db.execute({ sql: 'SELECT * FROM artists WHERE id=?', args: [id] })
         if (!rs.rows[0]) return c.json(null)
-        await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
-        return c.json(transformArtist(rs.rows[0] as unknown as ArtistRow))
+
+        const artist = rs.rows[0] as unknown as ArtistRow
+
+        // Fetch Tracks
+        const trs = await db.execute({
+            sql: 'SELECT id, title, audio_url, cover_url, duration, artist_id FROM tracks WHERE artist_id = ? ORDER BY created_at DESC',
+            args: [id]
+        })
+
+        const tracks = (trs.rows as unknown as any[]).map(t => ({
+            ...t,
+            cover_url: optimizeImageUrl(t.cover_url, 'cover'),
+            cover_thumb: optimizeImageUrl(t.cover_url, 'thumbnail')
+        }))
+
+        const result = { ...artist, tracks }
+
+        await cacheSet(cacheKey, result, TTL.ITEM)
+        return c.json(transformArtist(result))
     } catch { return c.json({ error: 'E_DB' }, 500) }
 }
 

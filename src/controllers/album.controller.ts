@@ -14,6 +14,7 @@ interface AlbumRow {
     type: string
     description: string
     artist: string
+    tracks?: any[]
 }
 
 const transformAlbum = (row: AlbumRow) => ({
@@ -54,8 +55,25 @@ export const getAlbum = async (c: Context) => {
             args: [id]
         })
         if (!rs.rows[0]) return c.json(null)
-        await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
-        return c.json(transformAlbum(rs.rows[0] as unknown as AlbumRow))
+
+        const album = rs.rows[0] as unknown as AlbumRow
+
+        // Fetch Tracks
+        const trs = await db.execute({
+            sql: 'SELECT id, title, audio_url, cover_url, duration, artist_id FROM tracks WHERE album_id = ? ORDER BY created_at DESC',
+            args: [id]
+        })
+
+        const tracks = (trs.rows as unknown as any[]).map(t => ({
+            ...t,
+            cover_url: optimizeImageUrl(t.cover_url, 'cover'),
+            cover_thumb: optimizeImageUrl(t.cover_url, 'thumbnail')
+        }))
+
+        const result = { ...album, tracks }
+
+        await cacheSet(cacheKey, result, TTL.ITEM)
+        return c.json(transformAlbum(result))
     } catch { return c.json({ error: 'E_DB' }, 500) }
 }
 
