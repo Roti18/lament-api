@@ -31,7 +31,7 @@ app.use('*', async (c, next) => {
     await next()
 })
 
-app.get('/', (c) => c.html('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lament API</title></head><body><h1>Lament API</h1><p>Documentation coming soon.</p></body></html>'))
+app.get('/', (c) => c.redirect('/docs/index.html'))
 app.get('/health', (c) => c.json({ s: 1 }))
 
 const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload']
