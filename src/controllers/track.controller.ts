@@ -4,13 +4,15 @@ import { deleteFileFromUrl } from '../services/storage'
 import { cacheGet, cacheSet, invalidateCache, TTL } from '../services/redis.service'
 import { optimizeImageUrl } from '../services/processor'
 
+interface Artist { id: string; name: string }
 interface TrackRow {
     id: string
     title: string
     audio_url: string
     cover_url: string
     duration: number
-    artist: string
+    album_id?: string
+    artists?: Artist[]
 }
 
 const transformTrack = (row: TrackRow) => ({
@@ -19,20 +21,45 @@ const transformTrack = (row: TrackRow) => ({
     cover_thumb: optimizeImageUrl(row.cover_url, 'thumbnail')
 })
 
+// Helper to fetch artists for multiple tracks
+const fetchArtistsForTracks = async (trackIds: string[]): Promise<Map<string, Artist[]>> => {
+    if (trackIds.length === 0) return new Map()
+    const placeholders = trackIds.map(() => '?').join(',')
+    const rs = await db.execute({
+        sql: `SELECT ta.track_id, a.id, a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id IN (${placeholders})`,
+        args: trackIds
+    })
+    const map = new Map<string, Artist[]>()
+    for (const row of rs.rows as any[]) {
+        const arr = map.get(row.track_id) || []
+        arr.push({ id: row.id, name: row.name })
+        map.set(row.track_id, arr)
+    }
+    return map
+}
+
 export const listTracks = async (c: Context) => {
     try {
         const q = c.req.query('q')
+        let sql = "SELECT id, title, audio_url, cover_url, duration, album_id FROM tracks WHERE status='ready'"
+        const args: any[] = []
         if (q) {
-            const rs = await db.execute({ sql: 'SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.status=\'ready\' AND t.title LIKE ? ORDER BY t.created_at DESC', args: [`%${q}%`] })
-            return c.json((rs.rows as unknown as TrackRow[]).map(transformTrack))
+            sql += " AND title LIKE ?"
+            args.push(`%${q}%`)
         }
+        sql += " ORDER BY created_at DESC"
 
-        const cached = await cacheGet<TrackRow[]>('cache:tracks:list')
+        const cached = !q ? await cacheGet<TrackRow[]>('cache:tracks:list') : null
         if (cached) return c.json(cached.map(transformTrack))
 
-        const rs = await db.execute('SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.status=\'ready\' ORDER BY t.created_at DESC')
-        await cacheSet('cache:tracks:list', rs.rows, TTL.LIST)
-        return c.json((rs.rows as unknown as TrackRow[]).map(transformTrack))
+        const rs = await db.execute({ sql, args })
+        const tracks = rs.rows as unknown as TrackRow[]
+        const artistsMap = await fetchArtistsForTracks(tracks.map(t => t.id))
+
+        const result = tracks.map(t => ({ ...t, artists: artistsMap.get(t.id) || [] }))
+
+        if (!q) await cacheSet('cache:tracks:list', result, TTL.LIST)
+        return c.json(result.map(transformTrack))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
     }
@@ -45,10 +72,15 @@ export const getTrack = async (c: Context) => {
         const cached = await cacheGet<TrackRow>(cacheKey)
         if (cached) return c.json(transformTrack(cached))
 
-        const rs = await db.execute({ sql: 'SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.id=?', args: [id] })
+        const rs = await db.execute({ sql: 'SELECT id, title, audio_url, cover_url, duration, album_id FROM tracks WHERE id=?', args: [id] })
         if (rs.rows.length === 0) return c.json({ error: 'E_NF' }, 404)
-        await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
-        return c.json(transformTrack(rs.rows[0] as unknown as TrackRow))
+
+        const track = rs.rows[0] as unknown as TrackRow
+        const artistsMap = await fetchArtistsForTracks([track.id])
+        track.artists = artistsMap.get(track.id) || []
+
+        await cacheSet(cacheKey, track, TTL.ITEM)
+        return c.json(transformTrack(track))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
     }

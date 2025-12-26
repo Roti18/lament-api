@@ -18,6 +18,24 @@ const transformArtist = (row: ArtistRow) => ({
     image_thumb: optimizeImageUrl(row.image_url, 'thumbnail')
 })
 
+// Helper to fetch artists for multiple tracks
+interface Artist { id: string; name: string }
+const fetchArtistsForTracks = async (trackIds: string[]): Promise<Map<string, Artist[]>> => {
+    if (trackIds.length === 0) return new Map()
+    const placeholders = trackIds.map(() => '?').join(',')
+    const rs = await db.execute({
+        sql: `SELECT ta.track_id, a.id, a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id IN (${placeholders})`,
+        args: trackIds
+    })
+    const map = new Map<string, Artist[]>()
+    for (const row of rs.rows as any[]) {
+        const arr = map.get(row.track_id) || []
+        arr.push({ id: row.id, name: row.name })
+        map.set(row.track_id, arr)
+    }
+    return map
+}
+
 export const listArtists = async (c: Context) => {
     try {
         const q = c.req.query('q')
@@ -47,14 +65,18 @@ export const getArtist = async (c: Context) => {
 
         const artist = rs.rows[0] as unknown as ArtistRow
 
-        // Fetch Tracks
+        // Fetch Tracks for this Artist via track_artists join
         const trs = await db.execute({
-            sql: 'SELECT id, title, audio_url, cover_url, duration, artist_id FROM tracks WHERE artist_id = ? ORDER BY created_at DESC',
+            sql: 'SELECT t.id, t.title, t.audio_url, t.cover_url, t.duration FROM tracks t JOIN track_artists ta ON ta.track_id = t.id WHERE ta.artist_id = ? ORDER BY t.created_at DESC',
             args: [id]
         })
 
-        const tracks = (trs.rows as unknown as any[]).map(t => ({
+        const trackRows = trs.rows as unknown as any[]
+        const artistsMap = await fetchArtistsForTracks(trackRows.map(t => t.id))
+
+        const tracks = trackRows.map(t => ({
             ...t,
+            artists: artistsMap.get(t.id) || [],
             cover_url: optimizeImageUrl(t.cover_url, 'cover'),
             cover_thumb: optimizeImageUrl(t.cover_url, 'thumbnail')
         }))
