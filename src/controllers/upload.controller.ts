@@ -1,6 +1,6 @@
 import { Context } from 'hono'
 import { processImage } from '../services/processor'
-import { getAudioIK, getImageIK } from '../services/storage'
+import { uploadToImageKit } from '../services/storage'
 
 export const uploadFile = async (c: Context) => {
     try {
@@ -12,19 +12,19 @@ export const uploadFile = async (c: Context) => {
         if (!type || !['image', 'audio'].includes(type)) return c.json({ error: 'E_TYPE' }, 400)
 
         const buffer = await file.arrayBuffer()
-        let finalBuffer: Buffer<ArrayBufferLike> = Buffer.from(buffer)
+        let finalData: Uint8Array | ArrayBuffer = new Uint8Array(buffer)
         let fileName = file.name
 
         if (type === 'image') {
             const processed = await processImage(buffer, file.type)
-            finalBuffer = processed.buffer
+            finalData = processed.buffer
             if (processed.extension === 'webp' && !fileName.endsWith('.webp')) {
                 fileName = fileName.replace(/\.[^/.]+$/, '') + '.webp'
             }
         }
 
-        const ik = type === 'audio' ? getAudioIK() : getImageIK()
-        const result = await ik.upload({ file: finalBuffer, fileName, folder: type === 'audio' ? 'audio' : 'covers', useUniqueFileName: true })
+        const folder = type === 'audio' ? 'audio' : 'covers'
+        const result = await uploadToImageKit(finalData, fileName, folder, type as 'audio' | 'image')
 
         return c.json({ url: result.url, fileId: result.fileId, name: result.name, type })
     } catch {

@@ -23,7 +23,6 @@
     "@libsql/client": "^0.15.15",
     "@upstash/redis": "^1.36.0",
     "hono": "^4.11.1",
-    "imagekit": "^6.0.0",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
