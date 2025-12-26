@@ -26,7 +26,14 @@ app.use('*', async (c, next) => {
     c.header('Access-Control-Max-Age', '86400')
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
-    c.header('Cache-Control', 'no-store')
+
+    // Smart caching: GET requests can be cached, mutations cannot
+    if (c.req.method === 'GET') {
+        c.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+    } else {
+        c.header('Cache-Control', 'no-store')
+    }
+
     if (c.req.method === 'OPTIONS') return c.body(null, 204)
     await next()
 })

@@ -1,10 +1,15 @@
 import { Context } from 'hono'
 import { db } from '../config/db'
 import { deleteFileFromUrl } from '../services/storage'
+import { cacheGet, cacheSet, invalidateCache, TTL } from '../services/redis.service'
 
 export const listTracks = async (c: Context) => {
     try {
+        const cached = await cacheGet<unknown[]>('cache:tracks:list')
+        if (cached) return c.json(cached)
+
         const rs = await db.execute('SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.status=\'ready\' ORDER BY t.created_at DESC')
+        await cacheSet('cache:tracks:list', rs.rows, TTL.LIST)
         return c.json(rs.rows)
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -14,8 +19,13 @@ export const listTracks = async (c: Context) => {
 export const getTrack = async (c: Context) => {
     try {
         const id = c.req.param('id')
+        const cacheKey = `cache:tracks:${id}`
+        const cached = await cacheGet<unknown>(cacheKey)
+        if (cached) return c.json(cached)
+
         const rs = await db.execute({ sql: 'SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.id=?', args: [id] })
         if (rs.rows.length === 0) return c.json({ error: 'E_NF' }, 404)
+        await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
         return c.json(rs.rows[0])
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -27,6 +37,7 @@ export const createTrack = async (c: Context) => {
         const body = await c.req.json()
         const id = crypto.randomUUID()
         await db.execute({ sql: 'INSERT INTO tracks(id,title,audio_url,cover_url,duration,artist_id,album_id,status)VALUES(?,?,?,?,?,?,?,\'ready\')', args: [id, body.title, body.audio_url, body.cover_url, body.duration || 0, body.artist_id, body.album_id || null] })
+        await invalidateCache('tracks')
         return c.json({ id }, 201)
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -38,6 +49,7 @@ export const updateTrack = async (c: Context) => {
         const id = c.req.param('id')
         const body = await c.req.json()
         await db.execute({ sql: 'UPDATE tracks SET title=?,audio_url=?,cover_url=?,duration=?,artist_id=?,album_id=? WHERE id=?', args: [body.title, body.audio_url, body.cover_url, body.duration, body.artist_id, body.album_id, id] })
+        await invalidateCache('tracks')
         return c.json({ s: 1 })
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -54,6 +66,7 @@ export const deleteTrack = async (c: Context) => {
             if (t.cover_url) deleteFileFromUrl(t.cover_url, 'image').catch(() => { })
         }
         await db.execute({ sql: 'DELETE FROM tracks WHERE id=?', args: [id] })
+        await invalidateCache('tracks')
         return c.json({ s: 1 })
     } catch {
         return c.json({ error: 'E_DB' }, 500)
