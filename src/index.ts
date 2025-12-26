@@ -50,7 +50,7 @@ app.get('/docs', (c) => c.json({
 }))
 app.get('/health', (c) => c.json({ s: 1 }))
 
-const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload']
+const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search']
 protectedPaths.forEach(p => { app.use(p, authMiddleware); app.use(`${p}/*`, authMiddleware) })
 
 app.route('/', routes)

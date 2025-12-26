@@ -8,6 +8,7 @@ import apiKeys from './api-key.route'
 import trackCategories from './track-category.route'
 import playlistTracks from './playlist-track.route'
 import upload from './upload.route'
+import search from './search.route'
 
 const app = new Hono()
 
@@ -20,5 +21,6 @@ app.route('/api-keys', apiKeys)
 app.route('/track-categories', trackCategories)
 app.route('/playlist-tracks', playlistTracks)
 app.route('/upload', upload)
+app.route('/search', search)
 
 export default app
