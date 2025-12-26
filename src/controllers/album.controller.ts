@@ -13,6 +13,7 @@ interface AlbumRow {
     year: number
     type: string
     description: string
+    artist: string
 }
 
 const transformAlbum = (row: AlbumRow) => ({
@@ -25,14 +26,17 @@ export const listAlbums = async (c: Context) => {
     try {
         const q = c.req.query('q')
         if (q) {
-            const rs = await db.execute({ sql: 'SELECT * FROM albums WHERE title LIKE ?', args: [`%${q}%`] })
+            const rs = await db.execute({
+                sql: 'SELECT al.*, ar.name as artist FROM albums al JOIN artists ar ON ar.id = al.artist_id WHERE al.title LIKE ?',
+                args: [`%${q}%`]
+            })
             return c.json((rs.rows as unknown as AlbumRow[]).map(transformAlbum))
         }
 
         const cached = await cacheGet<AlbumRow[]>('cache:albums:list')
         if (cached) return c.json(cached.map(transformAlbum))
 
-        const rs = await db.execute('SELECT * FROM albums')
+        const rs = await db.execute('SELECT al.*, ar.name as artist FROM albums al JOIN artists ar ON ar.id = al.artist_id ORDER BY al.year DESC')
         await cacheSet('cache:albums:list', rs.rows, TTL.LIST)
         return c.json((rs.rows as unknown as AlbumRow[]).map(transformAlbum))
     } catch { return c.json({ error: 'E_DB' }, 500) }
@@ -45,7 +49,10 @@ export const getAlbum = async (c: Context) => {
         const cached = await cacheGet<AlbumRow>(cacheKey)
         if (cached) return c.json(transformAlbum(cached))
 
-        const rs = await db.execute({ sql: 'SELECT * FROM albums WHERE id=?', args: [id] })
+        const rs = await db.execute({
+            sql: 'SELECT al.*, ar.name as artist FROM albums al JOIN artists ar ON ar.id = al.artist_id WHERE al.id=?',
+            args: [id]
+        })
         if (!rs.rows[0]) return c.json(null)
         await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
         return c.json(transformAlbum(rs.rows[0] as unknown as AlbumRow))
