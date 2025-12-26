@@ -24,18 +24,26 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
     const requestOrigin = c.req.header('origin') || ''
-    let allowOrigin = '*'
 
-    if (ORIGINS) {
-        const allowedList = ORIGINS.split(',').map(o => o.trim())
-        if (allowedList.includes(requestOrigin)) {
-            allowOrigin = requestOrigin
-        } else if (allowedList.length === 1) {
-            allowOrigin = allowedList[0]
-        }
+    const allowedList = ORIGINS
+        ? ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
+        : []
+
+    let allowOrigin: string
+
+    if (allowedList.length === 0) {
+        allowOrigin = '*'
+    } else if (allowedList.includes(requestOrigin)) {
+        allowOrigin = requestOrigin
+    } else if (!requestOrigin && allowedList.length > 0) {
+        allowOrigin = allowedList[0]
+    } else {
+        allowOrigin = ''
     }
 
-    c.header('Access-Control-Allow-Origin', allowOrigin)
+    if (allowOrigin) {
+        c.header('Access-Control-Allow-Origin', allowOrigin)
+    }
     c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     c.header('Access-Control-Allow-Headers', 'Content-Type,x-api-key')
     c.header('Access-Control-Max-Age', '86400')
