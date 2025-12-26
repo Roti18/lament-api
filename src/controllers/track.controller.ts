@@ -2,15 +2,31 @@ import { Context } from 'hono'
 import { db } from '../config/db'
 import { deleteFileFromUrl } from '../services/storage'
 import { cacheGet, cacheSet, invalidateCache, TTL } from '../services/redis.service'
+import { optimizeImageUrl } from '../services/processor'
+
+interface TrackRow {
+    id: string
+    title: string
+    audio_url: string
+    cover_url: string
+    duration: number
+    artist: string
+}
+
+const transformTrack = (row: TrackRow) => ({
+    ...row,
+    cover_url: optimizeImageUrl(row.cover_url, 'cover'),
+    cover_thumb: optimizeImageUrl(row.cover_url, 'thumbnail')
+})
 
 export const listTracks = async (c: Context) => {
     try {
-        const cached = await cacheGet<unknown[]>('cache:tracks:list')
-        if (cached) return c.json(cached)
+        const cached = await cacheGet<TrackRow[]>('cache:tracks:list')
+        if (cached) return c.json(cached.map(transformTrack))
 
         const rs = await db.execute('SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.status=\'ready\' ORDER BY t.created_at DESC')
         await cacheSet('cache:tracks:list', rs.rows, TTL.LIST)
-        return c.json(rs.rows)
+        return c.json((rs.rows as unknown as TrackRow[]).map(transformTrack))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
     }
@@ -20,13 +36,13 @@ export const getTrack = async (c: Context) => {
     try {
         const id = c.req.param('id')
         const cacheKey = `cache:tracks:${id}`
-        const cached = await cacheGet<unknown>(cacheKey)
-        if (cached) return c.json(cached)
+        const cached = await cacheGet<TrackRow>(cacheKey)
+        if (cached) return c.json(transformTrack(cached))
 
         const rs = await db.execute({ sql: 'SELECT t.id,t.title,t.audio_url,t.cover_url,t.duration,a.name AS artist FROM tracks t JOIN artists a ON a.id=t.artist_id WHERE t.id=?', args: [id] })
         if (rs.rows.length === 0) return c.json({ error: 'E_NF' }, 404)
         await cacheSet(cacheKey, rs.rows[0], TTL.ITEM)
-        return c.json(rs.rows[0])
+        return c.json(transformTrack(rs.rows[0] as unknown as TrackRow))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
     }
