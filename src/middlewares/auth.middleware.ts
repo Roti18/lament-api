@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono'
 import { db } from '../config/db'
-import { redis, isRateLimited } from '../services/redis.service'
+import { CacheService } from '../services/cache.service'
 
 const MASTER = process.env.MASTER_KEY || ''
 
@@ -27,14 +27,17 @@ export const authMiddleware = async (c: Context, next: Next) => {
     if (m === 'POST' || m === 'PUT' || m === 'DELETE') return c.json({ error: 'E_ACCESS' }, 403)
     try {
         const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
-        if (rs.rows.length === 0) return c.json({ error: 'E_AUTH' }, 401)
-        const row = rs.rows[0] as unknown as { id: number, rate_limit: number, clearance: number }
-        if (redis) {
-            if (await isRateLimited(key, row.rate_limit || 100, 60)) return c.json({ error: 'E_LIMIT' }, 429)
+        if (rs.rows.length === 0) {
+            return c.json({ error: 'E_AUTH' }, 401)
+        }
+        const row = rs.rows[0] as unknown as { id: string, rate_limit: number, clearance: number }
+        if (await CacheService.isRateLimited(key, row.rate_limit || 100, 60)) {
+            return c.json({ error: 'E_LIMIT' }, 429)
         }
         c.set('clearance', row.clearance || 0)
         return next()
-    } catch {
-        return c.json({ error: 'E_AUTH' }, 500)
+    } catch (err: any) {
+        console.error('[AUTH] Internal Error:', err.message, err.stack)
+        return c.json({ error: 'E_AUTH', message: err.message }, 500)
     }
 }
