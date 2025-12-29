@@ -1,6 +1,6 @@
 import { Context } from 'hono'
 import { db } from '../config/db'
-import { cacheGet, cacheSet, TTL } from '../services/redis.service'
+import { CacheService } from '../services/cache.service'
 import { parseLRC, LyricLine } from '../services/lyric-parser.service'
 
 interface Lyric {
@@ -25,22 +25,20 @@ export const getLyricsByTrack = async (c: Context) => {
 
         // 1. Check Track Existence
         const trackCheck = await db.execute({
-            sql: 'SELECT id FROM tracks WHERE id = ?',
+            sql: 'SELECT id, title, duration FROM tracks WHERE id = ?',
             args: [trackId]
         })
         if (trackCheck.rows.length === 0) {
             return c.json({ error: 'Track not found' }, 404)
         }
+        const trackData = trackCheck.rows[0] as unknown as { id: string, title: string, duration: number }
+        const durationMs = (trackData.duration || 0) * 1000 // duration is usually seconds in DB
 
         // 2. Caching Strategy
         const cacheKey = `lyrics:${trackId}:${variant}`
-        const cachedLines = await cacheGet<LyricLine[]>(cacheKey)
-        if (cachedLines) {
-            return c.json({
-                track_id: trackId,
-                variant: variant,
-                lines: cachedLines
-            })
+        const cachedData = await CacheService.get<any>(cacheKey)
+        if (cachedData && cachedData.lines && Array.isArray(cachedData.lines)) {
+            return c.json(cachedData)
         }
 
         // 3. Fetch Raw Data (Database)
@@ -56,12 +54,10 @@ export const getLyricsByTrack = async (c: Context) => {
 
         // 4. Variant Logic & Fallback
         let selectedLyric = allLyrics.find(l => l.variant === variant)
-        let actualVariant = variant
 
         if (!selectedLyric) {
             // Fallback to original
             selectedLyric = allLyrics.find(l => l.variant === 'original')
-            actualVariant = 'original'
         }
 
         if (!selectedLyric) {
@@ -70,18 +66,18 @@ export const getLyricsByTrack = async (c: Context) => {
         }
 
         // 5. Normalization / Parsing
-        const normalizedLines = parseLRC(selectedLyric.content)
+        const { lines: normalizedLines, synced } = parseLRC(selectedLyric.content, durationMs, trackData.title)
+        const responseData = {
+            variant: selectedLyric.variant,
+            lines: normalizedLines,
+            synced
+        }
 
-        // 6. Write Back to Redis Cache (TTL 24 hours)
-        // Note: Using the original requested variant for cache key to ensure subsequent 
-        // requests for the same variant hit the cache immediately even if it was a fallback.
-        await cacheSet(cacheKey, normalizedLines, 86400) // 24 hours in seconds
+        // 6. Cache & Return
+        // Cache result (24h)
+        await CacheService.set(cacheKey, responseData, 86400)
 
-        return c.json({
-            track_id: trackId,
-            variant: actualVariant,
-            lines: normalizedLines
-        } as LyricsResponse)
+        return c.json(responseData)
 
     } catch (error) {
         console.error('Lyrics error:', error)
@@ -105,7 +101,8 @@ export const addLyricVariant = async (c: Context) => {
         })
 
         // Invalidate cache for this variant
-        await cacheSet(`lyrics:${trackId}:${body.variant || 'original'}`, null, 0)
+        const cacheKey = `lyrics:${trackId}:${body.variant || 'original'}`
+        await CacheService.del(cacheKey)
 
         return c.json({ id }, 201)
     } catch (e) {
@@ -123,8 +120,15 @@ export const deleteLyric = async (c: Context) => {
 
         await db.execute({ sql: 'DELETE FROM lyrics WHERE id = ?', args: [id] })
 
-        // Invalidate cache
-        await cacheSet(`lyrics:${track_id}:${variant}`, null, 0)
+        // Clear cache for this track (all variants possible, but mainly we clear specific ones or logic needed)
+        // For simplicity, we might iterate variants or just rely on variant param if provided
+        // But if deleting a lyric entry, we should clear the cache for that variant
+        // Since we don't know variant easily here without query, better logic needed.
+        // Assuming variant is passed or we just clear standard ones.
+        const variants = ['original', 'romanized', 'translated']
+        for (const v of variants) {
+            await CacheService.del(`lyrics:${track_id}:${v}`)
+        }
 
         return c.json({ success: true })
     } catch {
