@@ -9,6 +9,7 @@ import trackCategories from './track-category.route'
 import playlistTracks from './playlist-track.route'
 import upload from './upload.route'
 import search from './search.route'
+import lyrics from './lyric.route'
 
 const app = new Hono()
 
@@ -22,5 +23,6 @@ app.route('/track-categories', trackCategories)
 app.route('/playlist-tracks', playlistTracks)
 app.route('/upload', upload)
 app.route('/search', search)
+app.route('/lyrics', lyrics)
 
 export default app
