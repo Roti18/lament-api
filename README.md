@@ -23,6 +23,7 @@ A secure, high-performance music metadata and streaming API built with Hono, Lib
 
 The project follows a clean MVC architecture within the `src` directory:
 
+
 ```
 src/
 ├── config/         # Database and Environment configuration
