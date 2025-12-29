@@ -1,7 +1,7 @@
 import { Context } from 'hono'
 import { db } from '../config/db'
 import { deleteFileFromUrl } from '../services/storage'
-import { cacheGet, cacheSet, invalidateCache, TTL } from '../services/redis.service'
+import { CacheService } from '../services/cache.service'
 import { optimizeImageUrl } from '../services/processor'
 
 interface Artist { id: string; name: string }
@@ -49,7 +49,7 @@ export const listTracks = async (c: Context) => {
         }
         sql += " ORDER BY created_at DESC"
 
-        const cached = !q ? await cacheGet<TrackRow[]>('cache:tracks:list') : null
+        const cached = !q ? await CacheService.get<TrackRow[]>('cache:tracks:list') : null
         if (cached) return c.json(cached.map(transformTrack))
 
         const rs = await db.execute({ sql, args })
@@ -58,7 +58,7 @@ export const listTracks = async (c: Context) => {
 
         const result = tracks.map(t => ({ ...t, artists: artistsMap.get(t.id) || [] }))
 
-        if (!q) await cacheSet('cache:tracks:list', result, TTL.LIST)
+        if (!q) await CacheService.set('cache:tracks:list', result, 1800)
         return c.json(result.map(transformTrack))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -69,7 +69,7 @@ export const getTrack = async (c: Context) => {
     try {
         const id = c.req.param('id')
         const cacheKey = `cache:tracks:${id}`
-        const cached = await cacheGet<TrackRow>(cacheKey)
+        const cached = await CacheService.get<TrackRow>(cacheKey)
         if (cached) return c.json(transformTrack(cached))
 
         const rs = await db.execute({ sql: 'SELECT id, title, audio_url, cover_url, duration, album_id FROM tracks WHERE id=?', args: [id] })
@@ -79,7 +79,7 @@ export const getTrack = async (c: Context) => {
         const artistsMap = await fetchArtistsForTracks([track.id])
         track.artists = artistsMap.get(track.id) || []
 
-        await cacheSet(cacheKey, track, TTL.ITEM)
+        await CacheService.set(cacheKey, track, 3600)
         return c.json(transformTrack(track))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -91,7 +91,7 @@ export const createTrack = async (c: Context) => {
         const body = await c.req.json()
         const id = crypto.randomUUID()
         await db.execute({ sql: 'INSERT INTO tracks(id,title,audio_url,cover_url,duration,artist_id,album_id,status)VALUES(?,?,?,?,?,?,?,\'ready\')', args: [id, body.title, body.audio_url, body.cover_url, body.duration || 0, body.artist_id, body.album_id || null] })
-        await invalidateCache('tracks')
+        await CacheService.del('cache:tracks:list')
         return c.json({ id }, 201)
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -103,7 +103,8 @@ export const updateTrack = async (c: Context) => {
         const id = c.req.param('id')
         const body = await c.req.json()
         await db.execute({ sql: 'UPDATE tracks SET title=?,audio_url=?,cover_url=?,duration=?,artist_id=?,album_id=? WHERE id=?', args: [body.title, body.audio_url, body.cover_url, body.duration, body.artist_id, body.album_id, id] })
-        await invalidateCache('tracks')
+        await CacheService.del('cache:tracks:list')
+        await CacheService.del(`cache:tracks:${id}`)
         return c.json({ s: 1 })
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -120,7 +121,8 @@ export const deleteTrack = async (c: Context) => {
             if (t.cover_url) deleteFileFromUrl(t.cover_url, 'image').catch(() => { })
         }
         await db.execute({ sql: 'DELETE FROM tracks WHERE id=?', args: [id] })
-        await invalidateCache('tracks')
+        await CacheService.del('cache:tracks:list')
+        await CacheService.del(`cache:tracks:${id}`)
         return c.json({ s: 1 })
     } catch {
         return c.json({ error: 'E_DB' }, 500)
