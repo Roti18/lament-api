@@ -45,12 +45,13 @@ app.get('/docs', (c) => c.json({
         artists: { list: 'GET /artists', get: 'GET /artists/:id', create: 'POST /artists', update: 'PUT /artists/:id', delete: 'DELETE /artists/:id' },
         albums: { list: 'GET /albums', get: 'GET /albums/:id', create: 'POST /albums', update: 'PUT /albums/:id', delete: 'DELETE /albums/:id' },
         categories: { list: 'GET /categories', get: 'GET /categories/:id', create: 'POST /categories' },
-        upload: { audio: 'POST /upload (multipart, type=audio)', image: 'POST /upload (multipart, type=image)' }
+        upload: { audio: 'POST /upload (multipart, type=audio)', image: 'POST /upload (multipart, type=image)' },
+        lyrics: { list: 'GET /tracks/:id/lyrics', add: 'POST /tracks/:id/lyrics', delete: 'DELETE /lyrics/:lyricId' }
     }
 }))
 app.get('/health', (c) => c.json({ s: 1 }))
 
-const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search']
+const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search', '/lyrics']
 protectedPaths.forEach(p => { app.use(p, authMiddleware); app.use(`${p}/*`, authMiddleware) })
 
 app.route('/', routes)
