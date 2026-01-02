@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { authMiddleware } from './middlewares/auth.middleware'
 import { corsAndCacheMiddleware, bodySizeMiddleware } from './middlewares/common.middleware'
 import edgeRoutes from './routes/edge-routes'
 
@@ -6,6 +7,17 @@ const app = new Hono()
 
 app.use('*', bodySizeMiddleware)
 app.use('*', corsAndCacheMiddleware)
+
+const protectedPaths = [
+    '/tracks', '/artists', '/albums', '/categories',
+    '/users', '/api-keys', '/upload', '/search',
+    '/lyrics', '/playlists', '/playlist-tracks', '/requests'
+]
+
+protectedPaths.forEach(p => {
+    app.use(p, authMiddleware)
+    app.use(`${p}/*`, authMiddleware)
+})
 
 app.route('/', edgeRoutes)
 

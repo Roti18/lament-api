@@ -1,4 +1,14 @@
 import { Hono } from 'hono'
+import * as trackController from '../controllers/track.controller'
+import * as artistController from '../controllers/artist.controller'
+import * as albumController from '../controllers/album.controller'
+import * as lyricsController from '../controllers/lyrics.controller'
+import * as playlistController from '../controllers/playlist.controller'
+import * as searchController from '../controllers/search.controller'
+import * as categoryController from '../controllers/category.controller'
+import * as playlistTrackController from '../controllers/playlist-track.controller'
+import * as uploadController from '../controllers/upload.controller'
+import { jwtAuth } from '../middlewares/jwt.middleware'
 
 const app = new Hono()
 
@@ -10,18 +20,43 @@ app.get('/', (c) => c.json({
     docs: '/docs'
 }))
 
-app.get('/docs', (c) => c.json({
-    auth: 'All endpoints require x-api-key header',
-    endpoints: {
-        tracks: { list: 'GET /tracks', get: 'GET /tracks/:id', create: 'POST /tracks', update: 'PUT /tracks/:id', delete: 'DELETE /tracks/:id' },
-        artists: { list: 'GET /artists', get: 'GET /artists/:id', create: 'POST /artists', update: 'PUT /artists/:id', delete: 'DELETE /artists/:id' },
-        albums: { list: 'GET /albums', get: 'GET /albums/:id', create: 'POST /albums', update: 'PUT /albums/:id', delete: 'DELETE /albums/:id' },
-        categories: { list: 'GET /categories', get: 'GET /categories/:id', create: 'POST /categories' },
-        upload: { audio: 'POST /upload (multipart, type=audio)', image: 'POST /upload (multipart, type=image)' },
-        lyrics: { list: 'GET /tracks/:id/lyrics', add: 'POST /tracks/:id/lyrics', delete: 'DELETE /lyrics/:lyricId' }
-    }
-}))
-
 app.get('/health', (c) => c.json({ s: 1, runtime: 'edge' }))
+
+// Public Read APIs (Fast + Cached)
+app.get('/tracks', trackController.listTracks)
+app.get('/tracks/:id', trackController.getTrack)
+app.get('/tracks/:id/lyrics', lyricsController.getLyricsByTrack)
+app.get('/artists', artistController.listArtists)
+app.get('/artists/:id', artistController.getArtist)
+app.get('/albums', albumController.listAlbums)
+app.get('/albums/:id', albumController.getAlbum)
+app.get('/categories', categoryController.listCategories)
+app.get('/search', searchController.globalSearch)
+app.get('/playlists/:id', playlistController.getPlaylistById)
+
+// Data Mutation APIs (Also on Edge for speed)
+app.post('/tracks', trackController.createTrack)
+app.put('/tracks/:id', trackController.updateTrack)
+app.delete('/tracks/:id', trackController.deleteTrack)
+app.post('/tracks/:id/lyrics', lyricsController.addLyricVariant)
+app.delete('/lyrics/:lyricId', lyricsController.deleteLyric)
+
+app.post('/artists', artistController.createArtist)
+app.put('/artists/:id', artistController.updateArtist)
+app.delete('/artists/:id', artistController.deleteArtist)
+
+app.post('/albums', albumController.createAlbum)
+app.put('/albums/:id', albumController.updateAlbum)
+app.delete('/albums/:id', albumController.deleteAlbum)
+
+app.post('/upload', uploadController.uploadFile)
+
+// Playlist Management
+app.use('/playlists/*', jwtAuth)
+app.post('/playlists', playlistController.createPlaylist)
+app.put('/playlists/:id', playlistController.updatePlaylist)
+app.delete('/playlists/:id', playlistController.deletePlaylist)
+app.post('/playlist-tracks', playlistTrackController.addTrackToPlaylist)
+app.delete('/playlist-tracks', playlistTrackController.removeTrackFromPlaylist)
 
 export default app
