@@ -19,10 +19,22 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
     const o = c.req.header('origin') || ''
-    const ao = ORIGINS.length === 0 ? '*' : ORIGINS.includes(o) ? o : !o ? ORIGINS[0] : ''
-    if (ao) c.header('Access-Control-Allow-Origin', ao)
+    let ao = ''
+    if (ORIGINS.length === 0) {
+        ao = o || '*'
+    } else {
+        ao = ORIGINS.includes(o) ? o : ''
+    }
+
+    if (ao && ao !== '*') {
+        c.header('Access-Control-Allow-Origin', ao)
+        c.header('Access-Control-Allow-Credentials', 'true')
+    } else {
+        c.header('Access-Control-Allow-Origin', '*')
+    }
+
     c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    c.header('Access-Control-Allow-Headers', 'Content-Type,x-api-key')
+    c.header('Access-Control-Allow-Headers', 'Content-Type,x-api-key,Authorization')
     c.header('Access-Control-Max-Age', '86400')
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
@@ -51,10 +63,18 @@ app.get('/docs', (c) => c.json({
 }))
 app.get('/health', (c) => c.json({ s: 1 }))
 
-const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search', '/lyrics']
+const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search', '/lyrics', '/playlists', '/playlist-tracks']
 protectedPaths.forEach(p => { app.use(p, authMiddleware); app.use(`${p}/*`, authMiddleware) })
 
 app.route('/', routes)
+
+app.onError((err, c) => {
+    return c.json({
+        error: 'E_INTERNAL',
+        message: err.message
+    }, 500)
+})
+
 app.notFound(() => new Response(null, { status: 404 }))
 
 export default app
