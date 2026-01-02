@@ -124,7 +124,7 @@ export const deleteArtist = async (c: Context) => {
     try {
         const id = c.req.param('id')
         const rs = await db.execute({ sql: 'SELECT image_url FROM artists WHERE id=?', args: [id] })
-        if (rs.rows.length > 0 && (rs.rows[0] as any).image_url) deleteFileFromUrl((rs.rows[0] as any).image_url, 'image').catch(() => { })
+        if (rs.rows.length > 0 && (rs.rows[0] as any).image_url) deleteFileFromUrl((rs.rows[0] as any).image_url).catch(() => { })
         await db.execute({ sql: 'DELETE FROM artists WHERE id=?', args: [id] })
         await CacheService.del('cache:artists:list')
         await CacheService.del(`cache:artists:${id}`)
