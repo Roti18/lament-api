@@ -8,6 +8,12 @@ export const uploadFile = async (c: Context) => {
         const file = body['file']
         const type = body['type'] as string
 
+        // Permission Check
+        const user = c.get('jwtPayload')
+        if (type === 'audio' && user?.role !== 'admin') {
+            return c.json({ error: 'E_PERM', message: 'Only admins can upload tracks' }, 403)
+        }
+
         if (!file || !(file instanceof File)) return c.json({ error: 'E_FILE' }, 400)
         if (!type || !['image', 'audio'].includes(type)) return c.json({ error: 'E_TYPE' }, 400)
 
@@ -23,8 +29,8 @@ export const uploadFile = async (c: Context) => {
             }
         }
 
-        const folder = type === 'audio' ? 'audio' : 'covers'
-        const result = await uploadToImageKit(finalData, fileName, folder, type as 'audio' | 'image')
+        const folder = type === 'audio' ? '/lament/music' : '/lament/images'
+        const result = await uploadToImageKit(finalData, fileName, folder)
 
         return c.json({ url: result.url, fileId: result.fileId, name: result.name, type })
     } catch {
