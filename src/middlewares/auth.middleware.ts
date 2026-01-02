@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono'
+import { getCookie } from 'hono/cookie'
 import { db } from '../config/db'
 import { CacheService } from '../services/cache.service'
 
@@ -24,7 +25,13 @@ export const authMiddleware = async (c: Context, next: Next) => {
     if (!key) return c.json({ error: 'E_AUTH' }, 401)
     if (MASTER && await safeCompare(key, MASTER)) return next()
     const m = c.req.method
-    if (m === 'POST' || m === 'PUT' || m === 'DELETE') return c.json({ error: 'E_ACCESS' }, 403)
+    // If it's a mutation request, we require either MASTER key access or a User Token (Authorization header or Cookie)
+    // The actual JWT validation happens in route-specific middleware
+    if (m === 'POST' || m === 'PUT' || m === 'DELETE') {
+        if (!c.req.header('authorization') && !getCookie(c, 'token')) {
+            return c.json({ error: 'E_ACCESS' }, 403)
+        }
+    }
     try {
         const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
         if (rs.rows.length === 0) {
