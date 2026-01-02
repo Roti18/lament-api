@@ -25,8 +25,8 @@ export const authMiddleware = async (c: Context, next: Next) => {
     if (!key) return c.json({ error: 'E_AUTH' }, 401)
     if (MASTER && await safeCompare(key, MASTER)) return next()
     const m = c.req.method
-    // If it's a mutation request, we require either MASTER key access or a User Token (Authorization header or Cookie)
-    // The actual JWT validation happens in route-specific middleware
+
+
     if (m === 'POST' || m === 'PUT' || m === 'DELETE') {
         if (!c.req.header('authorization') && !getCookie(c, 'token')) {
             return c.json({ error: 'E_ACCESS' }, 403)

@@ -4,12 +4,68 @@
     ],
     "rewrites": [
         {
-            "source": "/docs/:path*",
-            "destination": "/docs/:path*"
+            "source": "/docs",
+            "destination": "/api/index"
         },
         {
-            "source": "/((?!docs/).*)",
-            "destination": "/api"
+            "source": "/health",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/auth/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/tracks/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/artists/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/albums/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/categories/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/users/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/api-keys/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/playlist-tracks/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/playlists/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/upload/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/search/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/lyrics/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/requests/:path*",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/",
+            "destination": "/api/index"
         }
     ]
 }

@@ -1,14 +1,9 @@
-import { Hono } from 'hono'
-import { authMiddleware } from './middlewares/auth.middleware'
-import edgeRoutes from './routes/edge-routes'
-import nodeRoutes from './routes/node-routes'
+import { Context, Next } from 'hono'
 
 const ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim().replace(/\/$/, '')).filter(Boolean)
 const MAX_BODY = 5242880
 
-const app = new Hono()
-
-app.use('*', async (c, next) => {
+export const bodySizeMiddleware = async (c: Context, next: Next) => {
     const m = c.req.method
     if (m === 'POST' || m === 'PUT' || m === 'PATCH') {
         const ct = c.req.header('content-type') || ''
@@ -16,9 +11,9 @@ app.use('*', async (c, next) => {
         if (+(c.req.header('content-length') || 0) > MAX_BODY) return c.json({ error: 'E_SIZE' }, 413)
     }
     await next()
-})
+}
 
-app.use('*', async (c, next) => {
+export const corsAndCacheMiddleware = async (c: Context, next: Next) => {
     const o = c.req.header('origin') || ''
     let ao = ''
     if (ORIGINS.length === 0) {
@@ -48,19 +43,4 @@ app.use('*', async (c, next) => {
 
     if (c.req.method === 'OPTIONS') return c.body(null, 204)
     await next()
-})
-
-app.route('/', edgeRoutes)
-app.route('/', nodeRoutes)
-
-app.onError((err, c) => {
-    return c.json({
-        error: 'E_INTERNAL',
-        message: err.message
-    }, 500)
-})
-
-app.notFound(() => new Response(null, { status: 404 }))
-
-export default app
-export { app }
+}
