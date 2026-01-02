@@ -1,18 +1,8 @@
-const AUDIO_PRV = process.env.IMAGEKIT_AUDIO_PRIVATE_KEY
-const AUDIO_URL = process.env.IMAGEKIT_AUDIO_URL_ENDPOINT
-const IMAGE_PRV = process.env.IMAGEKIT_IMAGE_PRIVATE_KEY
-const IMAGE_URL = process.env.IMAGEKIT_IMAGE_URL_ENDPOINT
-const MAIN_PRV = process.env.IMAGEKIT_PRIVATE_KEY!
-const MAIN_URL = process.env.IMAGEKIT_URL_ENDPOINT!
+const PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY!
+const URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT!
 
-const getCredentials = (type: 'audio' | 'image') => {
-    if (type === 'audio' && AUDIO_PRV && AUDIO_URL) {
-        return { privateKey: AUDIO_PRV, urlEndpoint: AUDIO_URL }
-    }
-    if (type === 'image' && IMAGE_PRV && IMAGE_URL) {
-        return { privateKey: IMAGE_PRV, urlEndpoint: IMAGE_URL }
-    }
-    return { privateKey: MAIN_PRV, urlEndpoint: MAIN_URL }
+const getCredentials = () => {
+    return { privateKey: PRIVATE_KEY, urlEndpoint: URL_ENDPOINT }
 }
 
 const authHeader = (privateKey: string) => 'Basic ' + btoa(privateKey + ':')
@@ -26,10 +16,9 @@ interface UploadResult {
 export const uploadToImageKit = async (
     file: Uint8Array | ArrayBuffer,
     fileName: string,
-    folder: string,
-    type: 'audio' | 'image'
+    folder: string
 ): Promise<UploadResult> => {
-    const { privateKey } = getCredentials(type)
+    const { privateKey } = getCredentials()
 
     const bytes = file instanceof Uint8Array ? file : new Uint8Array(file)
     const base64 = btoa(String.fromCharCode(...bytes))
@@ -55,10 +44,10 @@ export const uploadToImageKit = async (
     return { url: data.url, fileId: data.fileId, name: data.name }
 }
 
-export const deleteFileFromUrl = async (url: string, type: 'image' | 'audio') => {
+export const deleteFileFromUrl = async (url: string) => {
     if (!url || !url.includes('ik.imagekit.io')) return
 
-    const { privateKey } = getCredentials(type)
+    const { privateKey } = getCredentials()
     const fileName = new URL(url).pathname.split('/').pop()
     if (!fileName) return
 
