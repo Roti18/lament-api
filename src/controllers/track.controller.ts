@@ -117,8 +117,8 @@ export const deleteTrack = async (c: Context) => {
         const rs = await db.execute({ sql: 'SELECT audio_url,cover_url FROM tracks WHERE id=?', args: [id] })
         if (rs.rows.length > 0) {
             const t = rs.rows[0] as unknown as { audio_url: string, cover_url: string }
-            if (t.audio_url) deleteFileFromUrl(t.audio_url, 'audio').catch(() => { })
-            if (t.cover_url) deleteFileFromUrl(t.cover_url, 'image').catch(() => { })
+            if (t.audio_url) deleteFileFromUrl(t.audio_url).catch(() => { })
+            if (t.cover_url) deleteFileFromUrl(t.cover_url).catch(() => { })
         }
         await db.execute({ sql: 'DELETE FROM tracks WHERE id=?', args: [id] })
         await CacheService.del('cache:tracks:list')
