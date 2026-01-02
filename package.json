@@ -21,6 +21,9 @@
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "google-auth-library": "^10.5.0",
     "hono": "^4.11.1",
     "lru-cache": "^11.2.4"
   },
