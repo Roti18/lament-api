@@ -8,7 +8,7 @@ const lruClient = new LRUCache<string, any>({
     allowStale: false,
 });
 
-console.log("[Cache] Using In-Memory LRU Cache (Redis removed).");
+console.log("[Cache] Using In-Memory LRU Cache.");
 
 export const CacheService = {
     /**
