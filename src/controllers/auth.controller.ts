@@ -4,8 +4,6 @@ import { setCookie } from 'hono/cookie'
 import { db } from '../config/db'
 import bcrypt from 'bcryptjs'
 
-import { OAuth2Client } from 'google-auth-library'
-
 const SECRET = process.env.JWT_SECRET || 'lament-secret-key-change-me'
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
 const IS_PROD = process.env.NODE_ENV === 'production'
@@ -116,17 +114,19 @@ export const login = async (c: Context) => {
 export const googleAuth = async (c: Context) => {
     try {
         const { token } = await c.req.json()
-        const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 
         if (!token) return c.json({ error: 'E_MISSING_TOKEN' }, 400)
-        if (!GOOGLE_CLIENT_ID) return c.json({ error: 'E_CONFIG_MISSING' }, 500)
 
-        const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID)
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: GOOGLE_CLIENT_ID,
-        })
-        const payload = ticket.getPayload()
+        // Native Fetch to Google (Edge Compatible)
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`)
+
+        if (!googleRes.ok) {
+            const err = await googleRes.json() as any
+            console.error('Google Auth Error:', err)
+            return c.json({ error: 'E_INVALID_GOOGLE_TOKEN', details: err }, 401)
+        }
+
+        const payload = await googleRes.json() as any
 
         if (!payload || !payload.email) {
             return c.json({ error: 'E_INVALID_GOOGLE_TOKEN' }, 401)

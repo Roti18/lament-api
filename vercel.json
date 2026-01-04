@@ -12,10 +12,6 @@
     },
     "rewrites": [
         {
-            "source": "/auth/:path*",
-            "destination": "/api/node"
-        },
-        {
             "source": "/requests/:path*",
             "destination": "/api/node"
         },
@@ -24,7 +20,7 @@
             "destination": "/api/node"
         },
         {
-            "source": "/((?!auth|requests|api-keys).*)",
+            "source": "/((?!requests|api-keys).*)",
             "destination": "/api/index"
         }
     ]
