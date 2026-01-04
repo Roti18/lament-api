@@ -103,7 +103,9 @@ export const googleAuth = async (c: Context) => {
         // SANITIZE: Deep clean object to remove hidden non-serializable properties from DB driver
         const cleanUser = JSON.parse(JSON.stringify(safeUser))
 
-        return c.json({ token: jwtToken, user: cleanUser })
+        return new Response(JSON.stringify({ token: jwtToken, user: cleanUser }), {
+            headers: { 'Content-Type': 'application/json' }
+        })
 
     } catch (e) {
         return c.json({ error: 'E_AUTH_FAILED' }, 401)
@@ -123,7 +125,9 @@ export const getProfile = async (c: Context) => {
 
     // SANITIZE
     const cleanUser = JSON.parse(JSON.stringify(rs.rows[0]))
-    return c.json(cleanUser)
+    return new Response(JSON.stringify(cleanUser), {
+        headers: { 'Content-Type': 'application/json' }
+    })
 }
 
 export const logout = async (c: Context) => {

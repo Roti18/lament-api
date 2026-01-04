@@ -18,7 +18,6 @@ app.use('*', async (c, next) => {
         if (+(c.req.header('content-length') || 0) > MAX_BODY) return c.json({ error: 'E_SIZE' }, 413)
     }
     await next()
-    c.res.headers.delete('content-encoding')
 })
 
 // Official CORS Middleware (Stable for Edge)
