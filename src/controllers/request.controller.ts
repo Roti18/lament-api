@@ -5,7 +5,7 @@ import { db } from '../config/db'
 export const createRequest = async (c: Context) => {
     try {
         const payload = c.get('jwtPayload')
-        if (!payload) return c.json({ error: 'Unauthorized' }, 401)
+        if (!payload || !payload.sub) return c.json({ error: 'Unauthorized' }, 401)
 
         const body = await c.req.json()
         const { query, metadata } = body
@@ -23,7 +23,10 @@ export const createRequest = async (c: Context) => {
         })
 
         return c.json({ id, status: 'pending' }, 201)
-    } catch (e) {
+    } catch (e: any) {
+        if (e?.code === 'SQLITE_CONSTRAINT') {
+            return c.json({ error: 'User account not found. Please log in again.' }, 401)
+        }
         console.error(e)
         return c.json({ error: 'E_DB' }, 500)
     }
@@ -56,7 +59,11 @@ export const listRequests = async (c: Context) => {
 export const getMyRequests = async (c: Context) => {
     try {
         const payload = c.get('jwtPayload')
-        if (!payload) return c.json({ error: 'Unauthorized' }, 401)
+        if (!payload || !payload.sub) {
+            return c.json({ error: 'Invalid Token: Missing User ID' }, 401)
+        }
+
+        console.log('[getMyRequests] Fetching for:', payload.sub)
 
         const rs = await db.execute({
             sql: `SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC`,
