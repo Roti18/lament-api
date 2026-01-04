@@ -99,9 +99,11 @@ export const googleAuth = async (c: Context) => {
         const jwtToken = await generateToken(user)
         await setAuthCookie(c, jwtToken)
 
-        // const jwtToken = "debug_dummy_token"
         const { password: _, ...safeUser } = user
-        return c.json({ token: jwtToken, user: safeUser })
+        // SANITIZE: Deep clean object to remove hidden non-serializable properties from DB driver
+        const cleanUser = JSON.parse(JSON.stringify(safeUser))
+
+        return c.json({ token: jwtToken, user: cleanUser })
 
     } catch (e) {
         return c.json({ error: 'E_AUTH_FAILED' }, 401)
@@ -118,7 +120,10 @@ export const getProfile = async (c: Context) => {
     })
 
     if (rs.rows.length === 0) return c.json({ error: 'User not found' }, 404)
-    return c.json(rs.rows[0])
+
+    // SANITIZE
+    const cleanUser = JSON.parse(JSON.stringify(rs.rows[0]))
+    return c.json(cleanUser)
 }
 
 export const logout = async (c: Context) => {
