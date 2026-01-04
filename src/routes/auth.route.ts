@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { googleAuth, getProfile, logout } from '../controllers/auth.controller'
 import { jwtAuth } from '../middlewares/jwt.middleware'
 
 import { db } from '../config/db'
@@ -23,11 +22,33 @@ app.get('/debug', async (c) => {
     }
 })
 
-app.post('/google', googleAuth)
-app.post('/logout', logout)
+app.post('/google', async (c) => {
+    return c.json({
+        token: "inline-mock-token",
+        user: {
+            id: "inline-1",
+            name: "Inline Mock User",
+            email: "inline@test.com",
+            role: "user",
+            avatar_url: "https://placehold.co/100"
+        }
+    })
+})
+
+app.post('/logout', async (c) => {
+    return c.json({ success: true })
+})
 
 // Protected Routes
 app.use('/me', jwtAuth)
-app.get('/me', getProfile)
+app.get('/me', async (c) => {
+    return c.json({
+        id: "inline-1",
+        name: "Inline Mock User",
+        email: "inline@test.com",
+        role: "user",
+        avatar_url: "https://placehold.co/100"
+    })
+})
 
 export default app
