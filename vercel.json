@@ -2,6 +2,14 @@
     "regions": [
         "sin1"
     ],
+    "functions": {
+        "api/node.ts": {
+            "maxDuration": 10
+        },
+        "api/index.ts": {
+            "maxDuration": 10
+        }
+    },
     "rewrites": [
         {
             "source": "/auth/:path*",
@@ -16,11 +24,7 @@
             "destination": "/api/node"
         },
         {
-            "source": "/users/:path*",
-            "destination": "/api/node"
-        },
-        {
-            "source": "/((?!auth|requests|api-keys|users).*)",
+            "source": "/((?!auth|requests|api-keys).*)",
             "destination": "/api/index"
         }
     ]

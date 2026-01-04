@@ -8,6 +8,7 @@ import * as searchController from '../controllers/search.controller'
 import * as categoryController from '../controllers/category.controller'
 import * as playlistTrackController from '../controllers/playlist-track.controller'
 import * as uploadController from '../controllers/upload.controller'
+import * as userController from '../controllers/user.controller'
 import { jwtAuth } from '../middlewares/jwt.middleware'
 
 const app = new Hono()
@@ -59,5 +60,9 @@ app.put('/playlists/:id', playlistController.updatePlaylist)
 app.delete('/playlists/:id', playlistController.deletePlaylist)
 app.post('/playlist-tracks', playlistTrackController.addTrackToPlaylist)
 app.delete('/playlist-tracks', playlistTrackController.removeTrackFromPlaylist)
+
+// User Management (Edge)
+app.get('/users/me', jwtAuth, userController.getMe)
+app.get('/users/:id', userController.getUser)
 
 export default app
