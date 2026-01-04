@@ -95,9 +95,11 @@ export const googleAuth = async (c: Context) => {
             }
         }
 
-        const jwtToken = await generateToken(user)
-        await setAuthCookie(c, jwtToken)
+        // DEBUG: Disable JWT to check if it causes decoding error
+        // const jwtToken = await generateToken(user)
+        // await setAuthCookie(c, jwtToken)
 
+        const jwtToken = "debug_dummy_token"
         const { password: _, ...safeUser } = user
         return c.json({ token: jwtToken, user: safeUser })
 
