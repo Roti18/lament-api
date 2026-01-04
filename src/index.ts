@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { authMiddleware } from './middlewares/auth.middleware'
 import edgeRoutes from './routes/edge-routes'
-import nodeRoutes from './routes/node-routes'
+// import nodeRoutes from './routes/node-routes'
 
 // @ts-ignore
 BigInt.prototype.toJSON = function () { return this.toString() }
@@ -58,7 +58,7 @@ app.use('*', async (c, next) => {
 })
 
 app.route('/', edgeRoutes)
-app.route('/', nodeRoutes)
+// app.route('/', nodeRoutes) // REMOVED: Node routes contain incompatible deps for Edge
 
 app.onError((err, c) => {
     if (err instanceof HTTPException) {
