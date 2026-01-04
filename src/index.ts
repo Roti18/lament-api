@@ -17,6 +17,9 @@ app.use('*', async (c, next) => {
         if (+(c.req.header('content-length') || 0) > MAX_BODY) return c.json({ error: 'E_SIZE' }, 413)
     }
     await next()
+    // Fix for "ERR_CONTENT_DECODING_FAILED" in Vercel Edge
+    // Sometimes Vercel double-compresses or conflicts with Hono's headers
+    c.res.headers.delete('content-encoding')
 })
 
 app.use('*', async (c, next) => {
