@@ -12,6 +12,18 @@
     },
     "rewrites": [
         {
+            "source": "/api/auth/login",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/api/auth/register",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/api/:path*",
+            "destination": "/api/index"
+        },
+        {
             "source": "/auth/login",
             "destination": "/api/node"
         },
