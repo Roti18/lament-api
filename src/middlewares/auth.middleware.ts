@@ -33,11 +33,18 @@ export const authMiddleware = async (c: Context, next: Next) => {
         }
     }
     try {
-        const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
-        if (rs.rows.length === 0) {
-            return c.json({ error: 'E_AUTH' }, 401)
+        const cacheKey = `apikey:${key}`
+        let row = await CacheService.get<{ id: string, rate_limit: number, clearance: number }>(cacheKey)
+
+        if (!row) {
+            const rs = await db.execute({ sql: 'SELECT id,rate_limit,clearance FROM api_keys WHERE key_hash=? AND is_active=1', args: [key] })
+            if (rs.rows.length === 0) {
+                return c.json({ error: 'E_AUTH' }, 401)
+            }
+            row = rs.rows[0] as unknown as { id: string, rate_limit: number, clearance: number }
+            await CacheService.set(cacheKey, row, 300) // Cache for 5 mins
         }
-        const row = rs.rows[0] as unknown as { id: string, rate_limit: number, clearance: number }
+
         if (await CacheService.isRateLimited(key, row.rate_limit || 100, 60)) {
             return c.json({ error: 'E_LIMIT' }, 429)
         }

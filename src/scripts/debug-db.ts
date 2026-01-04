@@ -18,7 +18,6 @@ async function check() {
         console.log('Columns:', COLS.rows);
 
         console.log('--- Test Query ---');
-        // Test the exact query that is failing
         await client.execute({
             sql: "SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC",
             args: ["test-user-id"]

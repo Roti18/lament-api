@@ -8,11 +8,23 @@ const app = new Hono()
 app.use('*', bodySizeMiddleware)
 app.use('*', corsAndCacheMiddleware)
 
+// Add security headers that should apply to all responses
+app.use('*', async (c, next) => {
+    c.header('X-Content-Type-Options', 'nosniff')
+    c.header('X-Frame-Options', 'DENY')
+    c.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups') // Added COOP header
+    await next()
+})
 
 const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search', '/lyrics', '/playlists', '/playlist-tracks', '/requests']
-protectedPaths.forEach(p => {
-    app.use(p, authMiddleware)
-    app.use(`${p}/*`, authMiddleware)
+
+// Conditional auth middleware
+app.use('*', async (c, next) => {
+    const isProtected = protectedPaths.some(p => c.req.path === p || c.req.path.startsWith(`${p}/`))
+    if (isProtected) {
+        return authMiddleware(c, next)
+    }
+    await next()
 })
 
 app.route('/', nodeRoutes)
