@@ -32,15 +32,11 @@
             "destination": "/api/node"
         },
         {
-            "source": "/requests/:path*",
-            "destination": "/api/node"
-        },
-        {
             "source": "/api-keys/:path*",
             "destination": "/api/node"
         },
         {
-            "source": "/((?!requests|api-keys).*)",
+            "source": "/:path*",
             "destination": "/api/index"
         }
     ]

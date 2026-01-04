@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import auth from './auth.route'
 import users from './user.route'
+import requests from './request.route'
 
 import * as trackController from '../controllers/track.controller'
 import * as artistController from '../controllers/artist.controller'
@@ -30,10 +31,12 @@ app.get('/ping', (c) => c.json({ pong: true, ts: Date.now() }))
 // Auth Domain (Edge)
 app.route('/auth', auth)
 app.route('/users', users)
+app.route('/requests', requests)
 
 // Also mount at /api/* for frontend compatibility (lament.ronxyz.xyz/api/*)
 app.route('/api/auth', auth)
 app.route('/api/users', users)
+app.route('/api/requests', requests)
 
 // Public Read APIs (Fast + Cached)
 app.get('/tracks', trackController.listTracks)
