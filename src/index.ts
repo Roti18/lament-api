@@ -25,3 +25,4 @@ app.onError((err, c) => {
 app.notFound(() => new Response(null, { status: 404 }))
 
 export default app
+export { app }
