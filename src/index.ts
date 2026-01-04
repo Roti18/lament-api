@@ -4,6 +4,9 @@ import { authMiddleware } from './middlewares/auth.middleware'
 import edgeRoutes from './routes/edge-routes'
 import nodeRoutes from './routes/node-routes'
 
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString() }
+
 const ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim().replace(/\/$/, '')).filter(Boolean)
 const MAX_BODY = 5242880
 
