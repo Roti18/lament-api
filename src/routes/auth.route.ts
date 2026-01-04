@@ -16,7 +16,7 @@ app.get('/debug', async (c) => {
             latency: end - start,
             val: rs.rows[0].val,
             db_url: process.env.TURSO_DATABASE_URL?.split(':')[0],
-            runtime: 'node'
+            runtime: 'dynamic'
         })
     } catch (e: any) {
         return c.json({ status: 'error', msg: e.message }, 500)
