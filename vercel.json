@@ -24,11 +24,7 @@
             "destination": "/api/node"
         },
         {
-            "source": "/debug-db",
-            "destination": "/api/node"
-        },
-        {
-            "source": "/((?!auth|requests|api-keys|debug-db).*)",
+            "source": "/((?!auth|requests|api-keys).*)",
             "destination": "/api/index"
         }
     ]
