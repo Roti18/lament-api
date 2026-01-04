@@ -8,8 +8,6 @@ const lruClient = new LRUCache<string, any>({
     allowStale: false,
 });
 
-console.log("[Cache] Using In-Memory LRU Cache.");
-
 export const CacheService = {
     /**
      * Get data from cache. 
@@ -18,7 +16,6 @@ export const CacheService = {
         try {
             return (lruClient.get(key) as T) || null;
         } catch (err) {
-            console.error(`[Cache] Error getting key ${key}:`, err);
             return null;
         }
     },
@@ -30,7 +27,7 @@ export const CacheService = {
         try {
             lruClient.set(key, value, { ttl: ttlSeconds * 1000 });
         } catch (err) {
-            console.error(`[Cache] Error setting key ${key}:`, err);
+            // Silent fail
         }
     },
 
@@ -41,7 +38,7 @@ export const CacheService = {
         try {
             lruClient.delete(key);
         } catch (err) {
-            console.error(`[Cache] Error deleting key ${key}:`, err);
+            // Silent fail
         }
     },
 

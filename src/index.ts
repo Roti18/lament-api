@@ -18,7 +18,6 @@ app.route('/', edgeRoutes)
 
 // Simple Error Handler
 app.onError((err, c) => {
-    console.error('Edge Error:', err)
     return c.json({ error: 'E_INTERNAL', message: err.message }, 500)
 })
 

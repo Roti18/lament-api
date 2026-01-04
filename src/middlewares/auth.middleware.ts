@@ -51,7 +51,6 @@ export const authMiddleware = async (c: Context, next: Next) => {
         c.set('clearance', row.clearance || 0)
         return next()
     } catch (err: any) {
-        console.error('[AUTH] Internal Error:', err.message, err.stack)
         return c.json({ error: 'E_AUTH', message: err.message }, 500)
     }
 }
