@@ -13,7 +13,6 @@ app.use('*', corsAndCacheMiddleware)
 app.use('*', async (c, next) => {
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
-    c.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups') // Added COOP header
     await next()
 })
 

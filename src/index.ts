@@ -40,7 +40,6 @@ app.use('*', async (c, next) => {
     c.header('Access-Control-Max-Age', '86400')
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
-    c.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
 
     if (c.req.method === 'GET') {
         c.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
