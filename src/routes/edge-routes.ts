@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import auth from './auth.route'
+import users from './user.route'
+
 import * as trackController from '../controllers/track.controller'
 import * as artistController from '../controllers/artist.controller'
 import * as albumController from '../controllers/album.controller'
@@ -26,6 +28,7 @@ app.get('/health', (c) => c.json({ s: 1, runtime: 'edge' }))
 
 // Auth Domain (Edge)
 app.route('/auth', auth)
+app.route('/users', users)
 
 // Public Read APIs (Fast + Cached)
 app.get('/tracks', trackController.listTracks)

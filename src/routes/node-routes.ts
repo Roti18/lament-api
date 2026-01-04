@@ -6,8 +6,7 @@ import apiKeys from './api-key.route'
 const app = new Hono()
 
 // IDENTITY & ADMIN DOMAIN (Node.js)
-// Handles bcrypt (Login/Register) and sensitive administrative tasks.
-app.route('/auth', authNode)
+app.route('/auth', authNode) // Login/Register (bcrypt)
 app.route('/requests', requests)
 app.route('/api-keys', apiKeys)
 
