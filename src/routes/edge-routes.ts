@@ -32,6 +32,7 @@ app.get('/albums', albumController.listAlbums)
 app.get('/albums/:id', albumController.getAlbum)
 app.get('/categories', categoryController.listCategories)
 app.get('/search', searchController.globalSearch)
+app.get('/playlists/me', jwtAuth, playlistController.listMyPlaylists)
 app.get('/playlists/:id', playlistController.getPlaylistById)
 
 // Data Mutation APIs (Also on Edge for speed)
