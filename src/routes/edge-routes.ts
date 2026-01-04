@@ -25,6 +25,7 @@ app.get('/', (c) => c.json({
 }))
 
 app.get('/health', (c) => c.json({ s: 1, runtime: 'edge' }))
+app.get('/ping', (c) => c.json({ pong: true, ts: Date.now() }))
 
 // Auth Domain (Edge)
 app.route('/auth', auth)

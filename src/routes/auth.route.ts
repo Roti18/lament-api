@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
+import { googleAuth, getProfile, logout } from '../controllers/auth.controller'
 import { jwtAuth } from '../middlewares/jwt.middleware'
-
 import { db } from '../config/db'
 
 const app = new Hono()
 
+// Debug endpoint to test DB+Edge connectivity
 app.get('/debug', async (c) => {
     try {
         const start = Date.now()
@@ -14,41 +15,19 @@ app.get('/debug', async (c) => {
             status: 'ok',
             latency: end - start,
             val: rs.rows[0].val,
-            db_url: process.env.TURSO_DATABASE_URL?.split(':')[0],
-            runtime: 'dynamic'
+            runtime: 'edge'
         })
     } catch (e: any) {
         return c.json({ status: 'error', msg: e.message }, 500)
     }
 })
 
-app.post('/google', async (c) => {
-    return c.json({
-        token: "inline-mock-token",
-        user: {
-            id: "inline-1",
-            name: "Inline Mock User",
-            email: "inline@test.com",
-            role: "user",
-            avatar_url: "https://placehold.co/100"
-        }
-    })
-})
-
-app.post('/logout', async (c) => {
-    return c.json({ success: true })
-})
+// Auth Endpoints
+app.post('/google', googleAuth)
+app.post('/logout', logout)
 
 // Protected Routes
 app.use('/me', jwtAuth)
-app.get('/me', async (c) => {
-    return c.json({
-        id: "inline-1",
-        name: "Inline Mock User",
-        email: "inline@test.com",
-        role: "user",
-        avatar_url: "https://placehold.co/100"
-    })
-})
+app.get('/me', getProfile)
 
 export default app
