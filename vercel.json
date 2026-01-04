@@ -12,6 +12,14 @@
     },
     "rewrites": [
         {
+            "source": "/auth/login",
+            "destination": "/api/node"
+        },
+        {
+            "source": "/auth/register",
+            "destination": "/api/node"
+        },
+        {
             "source": "/requests/:path*",
             "destination": "/api/node"
         },

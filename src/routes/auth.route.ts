@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { register, login, googleAuth, getProfile, logout } from '../controllers/auth.controller'
+import { googleAuth, getProfile, logout } from '../controllers/auth.controller'
 import { jwtAuth } from '../middlewares/jwt.middleware'
 
 import { db } from '../config/db'
@@ -23,8 +23,6 @@ app.get('/debug', async (c) => {
     }
 })
 
-app.post('/register', register)
-app.post('/login', login)
 app.post('/google', googleAuth)
 app.post('/logout', logout)
 
