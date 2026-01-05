@@ -16,15 +16,13 @@ app.use('*', async (c, next) => {
     await next()
 })
 
-const protectedPaths = ['/tracks', '/artists', '/albums', '/categories', '/users', '/api-keys', '/upload', '/search', '/lyrics', '/playlists', '/playlist-tracks', '/requests']
-
-// Conditional auth middleware
+// Protect everything except internal health checks
 app.use('*', async (c, next) => {
-    const isProtected = protectedPaths.some(p => c.req.path === p || c.req.path.startsWith(`${p}/`))
-    if (isProtected) {
-        return authMiddleware(c, next)
+    const path = c.req.path
+    if (path === '/' || path === '/health' || path === '/ping') {
+        return next()
     }
-    await next()
+    return authMiddleware(c, next)
 })
 
 app.route('/', nodeRoutes)

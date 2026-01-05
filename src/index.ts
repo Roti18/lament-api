@@ -1,22 +1,28 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { authMiddleware } from './middlewares/auth.middleware'
 import edgeRoutes from './routes/edge-routes'
 
-// Cleanest possible Edge Entry Point
 const app = new Hono()
 
-// CORS is critical, minimal config
 app.use('*', cors({
-    origin: (origin) => origin, // Allow all origins explicitly for debugging
+    origin: (origin) => origin,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
     credentials: true,
 }))
 
-// Mount Edge Routes
+// Protect everything except internal health checks
+app.use('*', async (c, next) => {
+    const path = c.req.path
+    if (path === '/' || path === '/health' || path === '/ping') {
+        return next()
+    }
+    return authMiddleware(c, next)
+})
+
 app.route('/', edgeRoutes)
 
-// Simple Error Handler
 app.onError((err, c) => {
     return c.json({ error: 'E_INTERNAL', message: err.message }, 500)
 })
