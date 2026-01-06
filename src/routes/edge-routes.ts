@@ -56,6 +56,7 @@ app.post('/tracks', trackController.createTrack)
 app.put('/tracks/:id', trackController.updateTrack)
 app.delete('/tracks/:id', trackController.deleteTrack)
 app.post('/tracks/:id/lyrics', lyricsController.addLyricVariant)
+app.get('/lyrics/:id', lyricsController.getLyricsByTrack)
 app.delete('/lyrics/:lyricId', lyricsController.deleteLyric)
 
 app.post('/artists', artistController.createArtist)
