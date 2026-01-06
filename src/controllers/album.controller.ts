@@ -61,6 +61,17 @@ export const listAlbums = async (c: Context) => {
     } catch { return c.json({ error: 'E_DB' }, 500) }
 }
 
+export const getRandomAlbums = async (c: Context) => {
+    try {
+        const limit = parseInt(c.req.query('limit') || '10')
+        const rs = await db.execute({
+            sql: 'SELECT al.*, ar.name as artist FROM albums al JOIN artists ar ON ar.id = al.artist_id ORDER BY RANDOM() LIMIT ?',
+            args: [limit]
+        })
+        return c.json((rs.rows as unknown as AlbumRow[]).map(transformAlbum))
+    } catch { return c.json({ error: 'E_DB' }, 500) }
+}
+
 export const getAlbum = async (c: Context) => {
     try {
         const id = c.req.param('id')

@@ -53,6 +53,14 @@ export const listArtists = async (c: Context) => {
     } catch { return c.json({ error: 'E_DB' }, 500) }
 }
 
+export const getRandomArtists = async (c: Context) => {
+    try {
+        const limit = parseInt(c.req.query('limit') || '10')
+        const rs = await db.execute({ sql: 'SELECT * FROM artists ORDER BY RANDOM() LIMIT ?', args: [limit] })
+        return c.json((rs.rows as unknown as ArtistRow[]).map(transformArtist))
+    } catch { return c.json({ error: 'E_DB' }, 500) }
+}
+
 export const getArtist = async (c: Context) => {
     try {
         const id = c.req.param('id')

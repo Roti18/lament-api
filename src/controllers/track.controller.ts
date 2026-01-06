@@ -65,6 +65,25 @@ export const listTracks = async (c: Context) => {
     }
 }
 
+export const getRandomTracks = async (c: Context) => {
+    try {
+        const limit = parseInt(c.req.query('limit') || '10')
+
+        // Order by RANDOM() is supported by SQLite/LibSQL
+        const sql = "SELECT id, title, audio_url, cover_url, duration, album_id FROM tracks WHERE status='ready' ORDER BY RANDOM() LIMIT ?"
+
+        const rs = await db.execute({ sql, args: [limit] })
+        const tracks = rs.rows as unknown as TrackRow[]
+
+        const artistsMap = await fetchArtistsForTracks(tracks.map(t => t.id))
+        const result = tracks.map(t => ({ ...t, artists: artistsMap.get(t.id) || [] }))
+
+        return c.json(result.map(transformTrack))
+    } catch (e) {
+        return c.json({ error: 'E_DB' }, 500)
+    }
+}
+
 export const getTrack = async (c: Context) => {
     try {
         const id = c.req.param('id')
