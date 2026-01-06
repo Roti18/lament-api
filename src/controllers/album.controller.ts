@@ -3,6 +3,7 @@ import { db } from '../config/db'
 import { deleteFileFromUrl } from '../services/storage'
 import { CacheService } from '../services/cache.service'
 import { optimizeImageUrl } from '../services/processor'
+import { getDailySeed } from '../middlewares/cache.middleware'
 
 interface AlbumRow {
     id: string
@@ -64,9 +65,14 @@ export const listAlbums = async (c: Context) => {
 export const getRandomAlbums = async (c: Context) => {
     try {
         const limit = parseInt(c.req.query('limit') || '10')
+        const seed = getDailySeed()
+
+        // Deterministic pseudo-random using daily rotating seed (cache-friendly)
         const rs = await db.execute({
-            sql: 'SELECT al.*, ar.name as artist FROM albums al JOIN artists ar ON ar.id = al.artist_id ORDER BY RANDOM() LIMIT ?',
-            args: [limit]
+            sql: `SELECT al.*, ar.name as artist FROM albums al 
+                  JOIN artists ar ON ar.id = al.artist_id 
+                  ORDER BY (al.ROWID % ?) DESC LIMIT ?`,
+            args: [seed, limit]
         })
         return c.json((rs.rows as unknown as AlbumRow[]).map(transformAlbum))
     } catch { return c.json({ error: 'E_DB' }, 500) }

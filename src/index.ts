@@ -1,9 +1,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { authMiddleware } from './middlewares/auth.middleware'
+import { cacheHeaders } from './middlewares/cache.middleware'
 import edgeRoutes from './routes/edge-routes'
 
 const app = new Hono()
+
+app.use('*', cacheHeaders)
 
 app.use('*', cors({
     origin: (origin) => origin,

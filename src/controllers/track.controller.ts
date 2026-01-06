@@ -3,6 +3,7 @@ import { db } from '../config/db'
 import { deleteFileFromUrl } from '../services/storage'
 import { CacheService } from '../services/cache.service'
 import { optimizeImageUrl } from '../services/processor'
+import { getDailySeed } from '../middlewares/cache.middleware'
 
 interface Artist { id: string; name: string }
 interface TrackRow {
@@ -49,8 +50,21 @@ export const listTracks = async (c: Context) => {
         }
         sql += " ORDER BY created_at DESC"
 
+        // ETag support for 304 responses (reduces FE CPU by skipping JSON parse)
+        const cacheKey = q ? `cache:tracks:search:${q}` : 'cache:tracks:list'
+        const etagKey = `etag:${cacheKey}`
+        const storedEtag = await CacheService.get<string>(etagKey)
+        const clientEtag = c.req.header('If-None-Match')
+
+        if (storedEtag && clientEtag === storedEtag) {
+            return c.body(null, 304)
+        }
+
         const cached = !q ? await CacheService.get<TrackRow[]>('cache:tracks:list') : null
-        if (cached) return c.json(cached.map(transformTrack))
+        if (cached) {
+            if (storedEtag) c.header('ETag', storedEtag)
+            return c.json(cached.map(transformTrack))
+        }
 
         const rs = await db.execute({ sql, args })
         const tracks = rs.rows as unknown as TrackRow[]
@@ -58,7 +72,14 @@ export const listTracks = async (c: Context) => {
 
         const result = tracks.map(t => ({ ...t, artists: artistsMap.get(t.id) || [] }))
 
-        if (!q) await CacheService.set('cache:tracks:list', result, 1800)
+        // Generate new ETag and cache
+        const newEtag = `"tracks-${Date.now()}"`
+        if (!q) {
+            await CacheService.set('cache:tracks:list', result, 1800)
+            await CacheService.set(etagKey, newEtag, 1800)
+        }
+
+        c.header('ETag', newEtag)
         return c.json(result.map(transformTrack))
     } catch {
         return c.json({ error: 'E_DB' }, 500)
@@ -68,11 +89,15 @@ export const listTracks = async (c: Context) => {
 export const getRandomTracks = async (c: Context) => {
     try {
         const limit = parseInt(c.req.query('limit') || '10')
+        const seed = getDailySeed()
 
-        // Order by RANDOM() is supported by SQLite/LibSQL
-        const sql = "SELECT id, title, audio_url, cover_url, duration, album_id FROM tracks WHERE status='ready' ORDER BY RANDOM() LIMIT ?"
+        // Deterministic pseudo-random using daily rotating seed (cache-friendly)
+        // ORDER BY (ROWID % seed) produces consistent results per day
+        const sql = `SELECT id, title, audio_url, cover_url, duration, album_id 
+                     FROM tracks WHERE status='ready' 
+                     ORDER BY (ROWID % ?) DESC, created_at DESC LIMIT ?`
 
-        const rs = await db.execute({ sql, args: [limit] })
+        const rs = await db.execute({ sql, args: [seed, limit] })
         const tracks = rs.rows as unknown as TrackRow[]
 
         const artistsMap = await fetchArtistsForTracks(tracks.map(t => t.id))
@@ -83,6 +108,7 @@ export const getRandomTracks = async (c: Context) => {
         return c.json({ error: 'E_DB' }, 500)
     }
 }
+
 
 export const getTrack = async (c: Context) => {
     try {
