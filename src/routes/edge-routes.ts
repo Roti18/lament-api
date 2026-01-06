@@ -39,11 +39,16 @@ app.route('/api/users', users)
 app.route('/api/requests', requests)
 
 // Public Read APIs (Fast + Cached)
+app.get('/tracks/random', trackController.getRandomTracks)
 app.get('/tracks', trackController.listTracks)
 app.get('/tracks/:id', trackController.getTrack)
 app.get('/tracks/:id/lyrics', lyricsController.getLyricsByTrack)
+
+app.get('/artists/random', artistController.getRandomArtists)
 app.get('/artists', artistController.listArtists)
 app.get('/artists/:id', artistController.getArtist)
+
+app.get('/albums/random', albumController.getRandomAlbums)
 app.get('/albums', albumController.listAlbums)
 app.get('/albums/:id', albumController.getAlbum)
 app.get('/categories', categoryController.listCategories)

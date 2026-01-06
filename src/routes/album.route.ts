@@ -3,6 +3,7 @@ import * as albumController from '../controllers/album.controller'
 
 const route = new Hono()
 
+route.get('/random', albumController.getRandomAlbums)
 route.get('/', albumController.listAlbums)
 route.get('/:id', albumController.getAlbum)
 route.post('/', albumController.createAlbum)
